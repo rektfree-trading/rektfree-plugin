@@ -1,17 +1,21 @@
 # RektFree Plugin
 
-A self-contained [Claude Code](https://code.claude.com) plugin for full-stack
-crypto **and forex/metals** market analysis — **Smart Money Concepts (SMC)**, **key levels**, **Market
-Profile**, **order flow**, **confluence scoring & market scan**, **session / SMC /
-PDH-PDL / Initial-Balance / day-type / extension stats**, **daily bias & ICT
-concepts**, **session forecasting**, **price-action patterns**, **volatility**,
-**correlation**, and **futures positioning** — with **Claude itself as the
-analyst**.
+![RektFree — Claude for the trader: SMC, order flow, levels, and stats inside one Claude Code plugin](docs/images/hero.png)
+
+**Claude for traders.** A self-contained [Claude Code](https://code.claude.com)
+plugin for full-stack **crypto, forex & metals** market analysis — **Smart Money
+Concepts (SMC)**, **key levels**, **Market Profile**, **order flow**, **confluence
+scoring & market scan**, a deep **stats layer** (session / SMC hit-rates / PDH-PDL
+/ Initial-Balance / day-type / extension), **daily bias & ICT concepts**, **session
+forecasting**, **price-action patterns**, **volatility**, **correlation**,
+**futures positioning**, plus an **in-memory backtester** and **edge discovery** —
+with **Claude itself as the analyst**.
 
 The plugin ships RektFree's pure-Python analysis engines behind a small MCP
-server. Claude calls a tool to fetch live Binance data and run the analysis, then
-interprets the structure for you. There are no AI-provider API keys to manage —
-the model you're already talking to *is* the brain.
+server. Claude calls a tool to fetch live **Binance** (crypto, keyless) or
+**OANDA** (forex/metals, your token) data, runs the analysis, and interprets the
+structure for you. There are no AI-provider API keys to manage — the model you're
+already talking to *is* the brain.
 
 > **Status: v0.3.** **22 tools** spanning structure, levels, value, flow,
 > derivatives, a broad stats layer (session, SMC hit-rates, PDH/PDL, Initial
@@ -22,6 +26,44 @@ the model you're already talking to *is* the brain.
 > killzone). **26 commands, 26 skills.** **Crypto is keyless** (Binance spot +
 > futures); **forex & metals** (EUR_USD, XAU_USD…) work with your own OANDA token.
 > Install is one step — the server self-bootstraps its deps (see `SETUP.md`).
+
+## Quick start
+
+```text
+/plugin marketplace add rektfree-trading/rektfree-plugin
+/plugin install rektfree-plugin@rektfree
+```
+
+Then just ask ("what's the setup on ETH?") or run a command:
+
+```text
+/analyze BTCUSDT      # full multi-factor brief — bias, levels, flow, plan
+/scan                 # rank the market for the best setups right now
+/brief                # pre-session game plan (session clock + stats + plan)
+/smc EUR_USD 1h       # forex/metals too (needs your OANDA token — see SETUP.md)
+```
+
+First launch auto-installs the server's dependencies (~10–30s). If the very first
+connect times out, reconnect once via `/mcp` — every session after is instant.
+Full details in [`SETUP.md`](SETUP.md).
+
+## What it looks like
+
+**Not an indicator — a system.** Claude reads structure, flow, and positioning
+across the whole analysis stack and turns it into a trading brief:
+
+![Analysis stack — SMC, order flow, market profile, derivatives, daily bias, session forecast: six modules, one brief](docs/images/analysis-stack.png)
+
+**Not opinion — a sample.** Backtests, session stats, SMC hit-rates, PDH/PDL,
+Initial Balance, day types, extensions, and edge discovery — every read carries a
+sample size:
+
+![Stats layer — backtests, session stats, SMC hit-rates, PDH/PDL, Initial Balance, day types, extensions, edge discovery](docs/images/stats-layer.png)
+
+**A plan before the session.** Ask → analyze → plan → execute — pre-session brief,
+killzones, confluence, a watchlist, and invalidation, in one flow:
+
+![Pre-session flow — ask, analyze, plan, execute: brief, killzones, confluence, watchlist, invalidation](docs/images/pre-session.png)
 
 ## What you get
 
