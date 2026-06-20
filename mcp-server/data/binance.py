@@ -13,6 +13,7 @@ account id even for candles. That is the future "bring-your-own-keys" path.
 from __future__ import annotations
 
 import asyncio
+import time
 
 import httpx
 
@@ -41,6 +42,18 @@ TIMEFRAME_MAP: dict[str, str] = {
 
 # Binance caps a single klines request at 1000 candles.
 MAX_LIMIT = 1000
+
+# Seconds per Binance interval — used by the paged historical fetcher to size a
+# lookback window. Keyed by the canonical interval strings in TIMEFRAME_MAP.
+INTERVAL_SECONDS: dict[str, int] = {
+    "1m": 60,
+    "5m": 300,
+    "15m": 900,
+    "1h": 3600,
+    "4h": 14400,
+    "1d": 86400,
+    "1w": 604800,
+}
 
 _HTTP_TIMEOUT = httpx.Timeout(15.0, connect=5.0)
 
@@ -182,17 +195,90 @@ async def fetch_candles(
     if not isinstance(raw, list):
         raise BinanceError(f"Unexpected Binance response: {raw!r}")
 
+    return [_kline_to_candle(item) for item in raw]
+
+
+def _kline_to_candle(item: list) -> dict:
+    """Convert one raw Binance kline row to a candle dict.
+
+    Kline layout: ``[openTime, open, high, low, close, volume, ...]``.
+    """
+    return {
+        "time": item[0] / 1000.0,  # ms → unix seconds
+        "open": float(item[1]),
+        "high": float(item[2]),
+        "low": float(item[3]),
+        "close": float(item[4]),
+        "volume": float(item[5]),
+    }
+
+
+async def fetch_candles_paged(
+    symbol: str,
+    timeframe: str = "1h",
+    total: int = 2000,
+    max_pages: int = 8,
+) -> list[dict]:
+    """Fetch up to ``total`` recent candles by paging Binance klines (keyless).
+
+    A single klines request caps at 1000 candles; statistics need a deeper
+    history, so this pages forward across a ``[now - total*interval, now]``
+    window, assembling and de-duplicating candles. Reuses the retrying
+    ``request_json`` helper and is hard-capped at ``max_pages`` requests to stay
+    polite to Binance's rate limits — so the returned series may be shorter than
+    ``total`` if the cap is hit first.
+
+    Args:
+        symbol: Binance symbol, e.g. ``BTCUSDT`` (no separator).
+        timeframe: One of 1m/5m/15m/1h/4h/1d/1w (aliases accepted).
+        total: Target number of most-recent candles to assemble.
+        max_pages: Hard cap on REST requests (each yields ≤1000 candles).
+
+    Returns:
+        A list of candle dicts ordered oldest→newest (same shape as
+        :func:`fetch_candles`).
+
+    Raises:
+        BinanceError: on HTTP failure or unexpected response shape.
+    """
+    interval = normalize_timeframe(timeframe)
+    sec = INTERVAL_SECONDS[interval]
+    sym = symbol.strip().upper()
+    total = max(1, int(total))
+
+    now_ms = int(time.time() * 1000)
+    cursor = now_ms - total * sec * 1000  # window start
+    seen: set[int] = set()
     candles: list[dict] = []
-    for item in raw:
-        # Kline layout: [openTime, open, high, low, close, volume, ...]
-        candles.append(
-            {
-                "time": item[0] / 1000.0,  # ms → unix seconds
-                "open": float(item[1]),
-                "high": float(item[2]),
-                "low": float(item[3]),
-                "close": float(item[4]),
-                "volume": float(item[5]),
+
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+        for _ in range(max(1, int(max_pages))):
+            if cursor >= now_ms:
+                break
+            params = {
+                "symbol": sym,
+                "interval": interval,
+                "startTime": cursor,
+                "limit": MAX_LIMIT,
             }
-        )
+            raw = await request_json(client, "klines", params, context="request")
+            if not isinstance(raw, list):
+                raise BinanceError(f"Unexpected Binance response: {raw!r}")
+            if not raw:
+                break
+
+            for item in raw:
+                open_ms = int(item[0])
+                if open_ms in seen:
+                    continue
+                seen.add(open_ms)
+                candles.append(_kline_to_candle(item))
+
+            # Short page → window exhausted. Otherwise advance past the last
+            # open time to the next bucket.
+            if len(raw) < MAX_LIMIT:
+                break
+            cursor = int(raw[-1][0]) + sec * 1000
+
+    candles.sort(key=lambda c: c["time"])
     return candles
