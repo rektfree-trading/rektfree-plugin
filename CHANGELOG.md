@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ETH value-area stats (`compute_eth_profile_stats`): how often the next day touches the prior day's POC/VAH/VAL, with average touch times.
 - `/strategy` now ingests a broker CSV/XLSX trade export (auto broker-detection + column mapping) and emits per-rule compliance and signal-alignment tables; trade data stays local to the conversation.
 - `SETUP.md` recipe for scheduling a pre-session `/brief` to recover the old auto-brief cadence without a server.
+- Slash commands for the previously command-less tools — `/possize`, `/candles`, `/backtestrr` — so every tool is reachable by command, plus `/peakpoints`, `/sessioncard`, `/orb`, `/ethprofile` for the new stats.
 
 ### Changed
 - `/brief` now folds in volatility/ATR sizing, cross-asset correlations, and (crypto) order flow — tools the brief already had but wasn't calling.

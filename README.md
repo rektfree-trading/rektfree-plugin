@@ -40,7 +40,7 @@ stale.
 > volatility, correlation, **position sizing / risk**, **raw candles**, plus an
 > **in-memory backtester** (frequency + R-multiple equity curve) and
 > **edge-discovery** — and `/analyze`, `/brief`, `/strategy` synthesis layers
-> with interpretation skills (multi-timeframe, killzone). **30 commands, 30
+> with interpretation skills (multi-timeframe, killzone). **33 commands, 30
 > skills.** **Crypto is keyless** (Binance spot +
 > futures); **forex, metals & stock indices** (EUR_USD, XAU_USD, NAS100_USD…)
 > work with your own OANDA token.
@@ -112,11 +112,18 @@ killzones, confluence, a watchlist, and invalidation, in one flow:
 | `get_price_action` MCP tool | **Candlestick / price-action patterns** (engulfing, pin bars, dojis, stars, inside/outside bars…) on recent candles + a candle summary. |
 | `run_backtest` MCP tool | **In-memory backtester**: "how often does X lead to Y?" Claude maps the question to structured conditions (event type, session, day-of-week, direction…); the tool computes the matching events over recent history and returns outcome rates + day-of-week breakdown, each with `n`. Consistency-checked against the stats tools. |
 | `discover_edges` MCP tool | **Edge mining**: grid-searches recent history for the strongest setups and anti-patterns, ranked by `edge_score = (win_rate − baseline) × √n`. Returns top edges + anti-patterns with sample sizes (hypotheses to validate, not guarantees). |
+| `backtest_rr` MCP tool | **R-multiple backtest**: first-touch trade simulation (ATR stop, R-target) over recent history → equity curve in R, expectancy, profit factor, win rate, and max drawdown. Stop-priority on ambiguous bars; no fees/slippage modeled. Session-family events (sweeps, continuations). |
+| `compute_peak_points_stats` MCP tool | **HOD/LOD by session**: which session prints the day's high vs low — marginal distributions plus the joint HOD×LOD probability matrix ("if Asia made the low, which session makes the high?"), each with `n`. |
+| `get_session_card` MCP tool | **Session potential card**: for one session (asia/london/new_york) — bullish/bearish day split, HOD/LOD odds, the clock window its extremes form in, and its breakout tendency vs the prior session. |
+| `compute_orb_stats` MCP tool | **Opening-range breakout** stats: first-break side, two-sided-break rate, outcome categories, and extension distribution (as multiples of the opening range). Best on forex/indices; crypto uses a synthetic RTH open. |
+| `compute_eth_profile_stats` MCP tool | **Prior-day value touch**: how often the next day touches the previous day's POC / VAH / VAL, with average touch times — a mean-reversion / target read for profile traders. |
+| `calc_position_size` MCP tool | **Risk-based sizing**: account equity + risk % + stop → position size, notional, R:R to target, breakeven win-rate, and leverage margin. Can derive an ATR-based stop. Exact for USD-quoted markets (crypto, `*_USD` forex/metals/indices). |
+| `get_candles` MCP tool | **Raw OHLCV** primitive: fetch candles (with ISO timestamps) for any supported symbol/timeframe so Claude can read or compute on actual prices. |
 | `/analyze` command + `synthesis` skill | The flagship read: orchestrates **all** the tools (HTF + entry-TF SMC, levels, profile, order flow, derivatives, confluence) into one weighted brief — bias, key levels, flow, positioning, session context, a trade idea with target & invalidation, and risks. Auto-activates on "what's the setup / full read / bias / trade idea" questions. |
 | `/brief` command + `brief` skill | A forward-looking **pre-session brief**: anchors on the session clock (what session we're in, what's next, the killzone), then wraps `/analyze` + `compute_session_stats` into a session game-plan with statistical tendencies and an if-then watch-list. |
 | `/strategy` command + `strategy` skill | **Trade / strategy review**: paste your trades (or describe your approach) and Claude computes your stats, cross-references representative trades against the analysis tools, runs a gap analysis vs the RektFree framework, and returns a critique + improvement plan. |
-| Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/mtf` `/killzone` `/backtest` `/edges` — run a tool (or stack tools) and ask Claude for a trader-facing read. |
-| Auto-activating skills | One per tool/domain plus interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, **`mtf`** (multi-timeframe), **`killzone`** (session timing), **`forex`** (forex/metals setup) — turning the raw numbers into decision-oriented analysis. |
+| Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/peakpoints` `/sessioncard` `/orb` `/ethprofile` `/mtf` `/killzone` `/backtest` `/backtestrr` `/edges` `/possize` `/candles` — run a tool (or stack tools) and ask Claude for a trader-facing read. |
+| Auto-activating skills | One per tool/domain plus interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, `peakpoints`, `sessioncard`, `orb`, `ethprofile`, `backtest`, `edges`, `strategy`, **`mtf`** (multi-timeframe), **`killzone`** (session timing), **`forex`** (forex/metals setup) — turning the raw numbers into decision-oriented analysis. |
 
 ## Requirements
 
@@ -172,21 +179,24 @@ rektfree-plugin/
     plugin.json          # plugin manifest
     marketplace.json     # makes this repo installable as a marketplace
   .mcp.json              # registers the stdio MCP server
-  commands/              # 21 slash commands (analyze, brief + one per tool)
-  skills/                # 20 skills (synthesis + one per tool/domain),
+  commands/              # 33 slash commands (analyze, brief, strategy + one per tool)
+  skills/                # 30 skills (synthesis + one per tool/domain),
                          #   each a SKILL.md + reference.md
   mcp-server/
     server.py            # FastMCP server — auto-discovers tools/*.register(mcp)
     requirements.txt     # mcp, httpx  (requirements-dev.txt adds pytest)
     config.py            # optional env config (reserved for forex/OANDA)
     pytest.ini
-    tools/               # 20 tool modules, each exposing register(mcp)
+    tools/               # 29 tool modules, each exposing register(mcp)
       _common.py         #   shared crypto-only guard + bias helper
       …                  #   smc, levels, market_profile, orderflow, confluence,
                          #   scan_market, session_stats, smc_stats, derivatives,
                          #   volatility, correlations, session_clock, daily_bias,
                          #   ict_concepts, pdh_pdl_stats, ib_stats, day_type_stats,
-                         #   session_extension_stats, session_forecast, price_action
+                         #   session_extension_stats, session_forecast, price_action,
+                         #   peak_points_stats, session_potential, orb_stats,
+                         #   eth_profile_stats, backtest, backtest_rr, edge_discovery,
+                         #   position_sizing, get_candles
     engines/             # pure analyzers (vendored from backend where applicable)
     data/
       binance.py         # keyless candle fetcher (+ shared retry/backoff, paged history)
