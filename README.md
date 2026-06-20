@@ -17,9 +17,9 @@ the model you're already talking to *is* the brain.
 > flow, derivatives, a broad stats layer (session, SMC hit-rates, PDH/PDL,
 > Initial Balance, day-type, session-extension), daily bias, ICT concepts,
 > session forecasting, price-action patterns, volatility, and correlation —
-> plus `/analyze` and `/brief` synthesis layers. **21 commands, 20 skills**,
-> crypto only (Binance spot + futures, keyless). Forex (OANDA, BYO-token) is the
-> main thing left.
+> plus `/analyze` and `/brief` synthesis layers and interpretation skills
+> (multi-timeframe, killzone). **23 commands, 22 skills**, crypto only (Binance
+> spot + futures, keyless). Forex (OANDA, BYO-token) is the main thing left.
 
 ## What you get
 
@@ -47,8 +47,8 @@ the model you're already talking to *is* the brain.
 | `get_price_action` MCP tool | **Candlestick / price-action patterns** (engulfing, pin bars, dojis, stars, inside/outside bars…) on recent candles + a candle summary. |
 | `/analyze` command + `synthesis` skill | The flagship read: orchestrates **all** the tools (HTF + entry-TF SMC, levels, profile, order flow, derivatives, confluence) into one weighted brief — bias, key levels, flow, positioning, session context, a trade idea with target & invalidation, and risks. Auto-activates on "what's the setup / full read / bias / trade idea" questions. |
 | `/brief` command + `brief` skill | A forward-looking **pre-session brief**: anchors on the session clock (what session we're in, what's next, the killzone), then wraps `/analyze` + `compute_session_stats` into a session game-plan with statistical tendencies and an if-then watch-list. |
-| Single-tool commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` — run a tool and ask Claude for a trader-facing read. |
-| Auto-activating skills | One per tool/domain (`smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`) — turn the raw numbers into decision-oriented analysis on the matching questions. |
+| Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/mtf` `/killzone` — run a tool (or stack tools) and ask Claude for a trader-facing read. |
+| Auto-activating skills | One per tool/domain plus two pure-interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, **`mtf`** (multi-timeframe alignment), **`killzone`** (session timing) — turning the raw numbers into decision-oriented analysis. |
 
 ## Requirements
 
