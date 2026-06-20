@@ -148,6 +148,27 @@ auto-discovers them, so adding a tool never touches `server.py`.
        Claude interprets ──▶ your trader-facing read
 ```
 
+## Development & tests
+
+The server has a pytest suite under `mcp-server/tests/`:
+
+```bash
+cd mcp-server
+pip install -r requirements-dev.txt
+pytest                  # offline: pure engines, guards, retry logic, session clock
+RF_LIVE_TESTS=1 pytest  # also run the live Binance contract tests (network)
+```
+
+The offline suite is fully deterministic (no network) and covers the analysis
+engines, the data-layer retry/backoff, the shared guards, and the session clock.
+The `live`-marked tests hit the public Binance API and assert every registered
+MCP tool returns a clean payload end-to-end; they're skipped unless
+`RF_LIVE_TESTS=1`.
+
+**Engine-sync note:** the `engines/` analyzers are vendored from the
+`rektfree-backend` repo. If those backend services change, re-copy them here and
+re-run the suite (see `PLUGIN_STATUS.md` in the backend repo).
+
 ## Roadmap
 
 - Forex/metals via OANDA (bring-your-own token) — `RF_OANDA_*` config is already
