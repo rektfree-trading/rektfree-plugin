@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "rektfree",
+  "version": "0.1.0",
+  "description": "RektFree trading-analysis plugins for Claude Code.",
+  "owner": {
+    "name": "RektFree"
+  },
+  "plugins": [
+    {
+      "name": "rektfree-plugin",
+      "displayName": "RektFree",
+      "description": "Smart Money Concepts (SMC) market analysis for crypto, powered by Claude as the analyst.",
+      "version": "0.1.0",
+      "source": "./",
+      "category": "data",
+      "keywords": ["trading", "crypto", "smc", "technical-analysis"]
+    }
+  ]
+}
