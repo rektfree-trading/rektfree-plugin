@@ -1,28 +1,31 @@
 # RektFree Plugin
 
 A self-contained [Claude Code](https://code.claude.com) plugin for **Smart Money
-Concepts (SMC)** and **key-levels** market analysis on crypto — with **Claude
-itself as the analyst**.
+Concepts (SMC)**, **key levels**, **Market Profile**, **order flow**, and
+**confluence scoring** market analysis on crypto — with **Claude itself as the
+analyst**.
 
 The plugin ships RektFree's pure-Python analysis engines behind a small MCP
 server. Claude calls a tool to fetch live Binance data and run the analysis, then
 interprets the structure for you. There are no AI-provider API keys to manage —
 the model you're already talking to *is* the brain.
 
-> **Status: v0.2 (in progress).** Two tools (`analyze_smc`, `get_levels`), two
-> commands (`/smc`, `/levels`), two skills (SMC, levels), crypto only (Binance,
-> keyless). Forex, the confluence scanner, stats, and briefs are planned next.
+> **Status: v0.2 (in progress).** Five tools (`analyze_smc`, `get_levels`,
+> `get_market_profile`, `get_orderflow`, `scan_confluence`), five commands
+> (`/smc`, `/levels`, `/profile`, `/orderflow`, `/scan`), five skills, crypto
+> only (Binance, keyless). Forex (OANDA, BYO-token) and stats/briefs are next.
 
 ## What you get
 
 | Piece | What it does |
 |---|---|
 | `analyze_smc` MCP tool | Fetches Binance OHLCV (no API key) and runs the full SMC engine: BOS/CHoCH, order blocks, FVGs, equal highs/lows, liquidity sweeps, breaker blocks, premium/discount range. Returns structured JSON. |
-| `get_levels` MCP tool | Fetches Binance 15m candles (no API key) and computes time-based levels: daily/weekly/monthly highs, lows, and opens (current + previous period) plus Asia/London/NY session highs & lows. Returns structured JSON. |
-| `/smc` command | `/smc BTCUSDT 4h` — runs SMC analysis and asks Claude for a trader-facing read. |
-| `/levels` command | `/levels BTCUSDT` — maps the key levels and asks Claude for support/resistance, liquidity, and bias. |
-| `smc` skill | Auto-activates when you ask about structure, order blocks, FVGs, liquidity, or bias — turns the raw numbers into a decision-oriented analysis. |
-| `levels` skill | Auto-activates when you ask about support/resistance, PDH/PDL, session highs/lows, or where liquidity is resting. |
+| `get_levels` MCP tool | Fetches Binance 15m candles (no API key) and computes time-based levels: daily/weekly/monthly highs, lows, and opens (current + previous period) plus Asia/London/NY session highs & lows. |
+| `get_market_profile` MCP tool | Computes per-session Market Profile / TPO from Binance candles: POC, Value Area (VAH/VAL), and the bucketed letter profile. |
+| `get_orderflow` MCP tool | Reconstructs footprint / order flow on the fly from Binance's keyless public aggregated-trades feed: per-price-level buy/sell volume, per-candle delta, running CVD, and large trades. |
+| `scan_confluence` MCP tool | Grades a setup with the 0–N Smart Money confluence score across 1H + 4H (requires an aligned order block near price). Deterministic — no AI, no macro/DB inputs. Returns the score, factor breakdown, direction, target, and invalidation. |
+| `/smc` `/levels` `/profile` `/orderflow` `/scan` commands | One-shot wrappers, e.g. `/scan BTCUSDT` — run the tool and ask Claude for a trader-facing read. |
+| `smc` · `levels` · `tpo` · `orderflow` · `scan` skills | Auto-activate on the matching questions (structure/OBs/FVGs; support/resistance/PDH/PDL/sessions; POC/value area; delta/CVD/absorption; setup grading) and turn the raw numbers into decision-oriented analysis. |
 
 ## Requirements
 
@@ -84,25 +87,25 @@ rektfree-plugin/
     marketplace.json     # makes this repo installable as a marketplace
   .mcp.json              # registers the stdio MCP server
   commands/
-    smc.md               # /smc slash command
-    levels.md            # /levels slash command
+    smc.md  levels.md  profile.md  orderflow.md  scan.md   # slash commands
   skills/
-    smc/
-      SKILL.md           # SMC skill — Claude as analyst
-      reference.md       # full SMC playbook (definitions + rules)
-    levels/
-      SKILL.md           # levels skill — Claude as analyst
-      reference.md       # full key-levels playbook (definitions + rules)
+    smc/  levels/  tpo/  orderflow/  scan/                 # one SKILL.md + reference.md each
   mcp-server/
-    server.py            # FastMCP server — analyze_smc, get_levels tools
+    server.py            # FastMCP server — auto-discovers tools/*.register(mcp)
     requirements.txt     # mcp, httpx
     config.py            # optional env config (reserved for forex/OANDA)
-    engines/
-      smart_money.py     # vendored pure SMC analyzer (unchanged)
-      levels.py          # vendored pure key-levels engine (unchanged)
+    tools/
+      _common.py         # shared crypto-only guard + bias helper
+      smc.py  levels.py  market_profile.py  orderflow.py  confluence.py
+    engines/             # vendored pure analyzers (unchanged from backend)
+      smart_money.py  levels.py  market_profile.py  orderflow.py  confluence.py
     data/
       binance.py         # keyless Binance candle fetcher
+      agg_trades.py      # keyless Binance aggregated-trades fetcher (order flow)
 ```
+
+Each tool lives in its own `tools/<name>.py` exposing `register(mcp)`; the server
+auto-discovers them, so adding a tool never touches `server.py`.
 
 ## How it works
 
@@ -126,6 +129,6 @@ rektfree-plugin/
 
 - Forex/metals via OANDA (bring-your-own token) — `RF_OANDA_*` config is already
   stubbed in `config.py`.
-- More tools: `get_market_profile`, `get_orderflow`, `scan_confluence`,
-  `compute_stats`.
-- `/brief`, `/scan`, `/stats` commands and their skills.
+- `compute_stats` — session + SMC hit-rate stats computed on the fly (the backend
+  derives these from a DB the plugin doesn't have).
+- `/brief` and `/stats` commands and their skills.
