@@ -13,13 +13,14 @@ server. Claude calls a tool to fetch live Binance data and run the analysis, the
 interprets the structure for you. There are no AI-provider API keys to manage —
 the model you're already talking to *is* the brain.
 
-> **Status: v0.2 (in progress).** **20 tools** spanning structure, levels, value,
-> flow, derivatives, a broad stats layer (session, SMC hit-rates, PDH/PDL,
-> Initial Balance, day-type, session-extension), daily bias, ICT concepts,
-> session forecasting, price-action patterns, volatility, and correlation —
-> plus `/analyze` and `/brief` synthesis layers and interpretation skills
-> (multi-timeframe, killzone). **23 commands, 22 skills**, crypto only (Binance
-> spot + futures, keyless). Forex (OANDA, BYO-token) is the main thing left.
+> **Status: v0.2.** **22 tools** spanning structure, levels, value, flow,
+> derivatives, a broad stats layer (session, SMC hit-rates, PDH/PDL, Initial
+> Balance, day-type, session-extension), daily bias, ICT concepts, session
+> forecasting, price-action patterns, volatility, correlation, plus an
+> **in-memory backtester** and **edge-discovery** — and `/analyze`, `/brief`,
+> `/strategy` synthesis layers with interpretation skills (multi-timeframe,
+> killzone). **26 commands, 25 skills**, crypto only (Binance spot + futures,
+> keyless). Forex (OANDA, BYO-token) is the main thing left.
 
 ## What you get
 
@@ -45,9 +46,12 @@ the model you're already talking to *is* the brain.
 | `compute_session_extension_stats` MCP tool | How often / how far a session **extends beyond the prior session's range** (overshoot multiples), by session. |
 | `get_session_forecast` MCP tool | A **frequency-based forecast** for the next session: expected range band, prior-session sweep odds, continuation vs reversal — every probability tied to its `n`. |
 | `get_price_action` MCP tool | **Candlestick / price-action patterns** (engulfing, pin bars, dojis, stars, inside/outside bars…) on recent candles + a candle summary. |
+| `run_backtest` MCP tool | **In-memory backtester**: "how often does X lead to Y?" Claude maps the question to structured conditions (event type, session, day-of-week, direction…); the tool computes the matching events over recent history and returns outcome rates + day-of-week breakdown, each with `n`. Consistency-checked against the stats tools. |
+| `discover_edges` MCP tool | **Edge mining**: grid-searches recent history for the strongest setups and anti-patterns, ranked by `edge_score = (win_rate − baseline) × √n`. Returns top edges + anti-patterns with sample sizes (hypotheses to validate, not guarantees). |
 | `/analyze` command + `synthesis` skill | The flagship read: orchestrates **all** the tools (HTF + entry-TF SMC, levels, profile, order flow, derivatives, confluence) into one weighted brief — bias, key levels, flow, positioning, session context, a trade idea with target & invalidation, and risks. Auto-activates on "what's the setup / full read / bias / trade idea" questions. |
 | `/brief` command + `brief` skill | A forward-looking **pre-session brief**: anchors on the session clock (what session we're in, what's next, the killzone), then wraps `/analyze` + `compute_session_stats` into a session game-plan with statistical tendencies and an if-then watch-list. |
-| Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/mtf` `/killzone` — run a tool (or stack tools) and ask Claude for a trader-facing read. |
+| `/strategy` command + `strategy` skill | **Trade / strategy review**: paste your trades (or describe your approach) and Claude computes your stats, cross-references representative trades against the analysis tools, runs a gap analysis vs the RektFree framework, and returns a critique + improvement plan. |
+| Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/mtf` `/killzone` `/backtest` `/edges` — run a tool (or stack tools) and ask Claude for a trader-facing read. |
 | Auto-activating skills | One per tool/domain plus two pure-interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, **`mtf`** (multi-timeframe alignment), **`killzone`** (session timing) — turning the raw numbers into decision-oriented analysis. |
 
 ## Requirements
@@ -70,9 +74,6 @@ From a Claude Code session:
 /plugin marketplace add rektfree-trading/rektfree-plugin
 /plugin install rektfree-plugin@rektfree
 ```
-
-(The repo is private during the beta — you'll need GitHub access to the
-`rektfree-trading` org for the clone to succeed.)
 
 Then reload, and try:
 

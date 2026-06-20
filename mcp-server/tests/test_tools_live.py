@@ -28,6 +28,8 @@ EXPECTED_TOOLS = {
     "get_daily_bias", "get_ict_concepts", "compute_pdh_pdl_stats",
     "compute_ib_stats", "compute_day_type_stats",
     "compute_session_extension_stats", "get_session_forecast", "get_price_action",
+    # third wave
+    "run_backtest", "discover_edges",
 }
 
 CASES = [
@@ -51,6 +53,8 @@ CASES = [
     ("compute_session_extension_stats", {"symbol": "BTCUSDT", "days": 30}, "extensions"),
     ("get_session_forecast", {"symbol": "BTCUSDT", "days": 60}, "expected_range"),
     ("get_price_action", {"symbol": "BTCUSDT", "timeframe": "1h", "limit": 120}, "patterns"),
+    ("run_backtest", {"symbol": "BTCUSDT", "event_type": "london_sweep", "days": 90}, "outcomes"),
+    ("discover_edges", {"symbol": "BTCUSDT", "days": 120, "min_samples": 8}, "edges"),
 ]
 
 
