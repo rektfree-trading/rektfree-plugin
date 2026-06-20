@@ -7,8 +7,8 @@ rates in Python — mirroring the hosted product's ``/stats/smc/summary``
 endpoint, but with NO database.
 
 The hosted product persists per-structure outcomes and aggregates over the
-full candle history; this tool runs the same evaluation over the last ~2500
-1H candles (~3-4 months) in memory. So the numbers approximate the hosted ones
+full candle history; this tool runs the same evaluation over the last ~5000
+1H candles (~7 months) in memory. So the numbers approximate the hosted ones
 but will differ — and any rate with a small sample size ``n`` is noisy.
 """
 
@@ -18,10 +18,11 @@ from engines import smc_stats as smc_engine
 from data import binance
 from tools._common import crypto_only_error
 
-# How much 1H history to pull. ~2500 1H candles ≈ 104 days. Paged because a
-# single Binance klines request caps at 1000.
-_TOTAL_CANDLES = 2500
-_MAX_PAGES = 8
+# How much 1H history to pull. ~5000 1H candles ≈ 208 days — a deeper window
+# for tighter hit-rate samples. Paged because a single Binance klines request
+# caps at 1000.
+_TOTAL_CANDLES = 5000
+_MAX_PAGES = 12
 
 
 def _rate(num: int, den: int) -> float:
@@ -146,8 +147,8 @@ def register(mcp) -> None:
         type splits) so the model can weight confidence — a 70% rate from n=4
         is noise, the same rate from n=120 is signal.
 
-        IMPORTANT: these rates come from roughly the last ~2500 1H candles
-        (~3-4 months). The hosted product aggregates over *full* history, so
+        IMPORTANT: these rates come from roughly the last ~5000 1H candles
+        (~7 months). The hosted product aggregates over *full* history, so
         numbers here will differ from app.rektfree.com. Treat any small-n rate
         as noisy.
 

@@ -24,6 +24,10 @@ EXPECTED_TOOLS = {
     "scan_confluence", "scan_market", "compute_session_stats",
     "compute_smc_stats", "get_derivatives", "get_volatility",
     "get_correlations", "get_session_clock",
+    # second wave
+    "get_daily_bias", "get_ict_concepts", "compute_pdh_pdl_stats",
+    "compute_ib_stats", "compute_day_type_stats",
+    "compute_session_extension_stats", "get_session_forecast", "get_price_action",
 }
 
 CASES = [
@@ -39,6 +43,14 @@ CASES = [
     ("get_volatility", {"symbol": "BTCUSDT", "timeframe": "1h"}, "atr"),
     ("get_correlations", {"symbols": "BTCUSDT,ETHUSDT,SOLUSDT"}, "vs_base"),
     ("get_session_clock", {}, "session"),
+    ("get_daily_bias", {"symbol": "BTCUSDT"}, "current_bias"),
+    ("get_ict_concepts", {"symbol": "BTCUSDT"}, "current_dol"),
+    ("compute_pdh_pdl_stats", {"symbol": "BTCUSDT", "days": 30}, "pdh"),
+    ("compute_ib_stats", {"symbol": "BTCUSDT", "days": 30}, "breakouts"),
+    ("compute_day_type_stats", {"symbol": "BTCUSDT", "days": 30}, "day_types"),
+    ("compute_session_extension_stats", {"symbol": "BTCUSDT", "days": 30}, "extensions"),
+    ("get_session_forecast", {"symbol": "BTCUSDT", "days": 60}, "expected_range"),
+    ("get_price_action", {"symbol": "BTCUSDT", "timeframe": "1h", "limit": 120}, "patterns"),
 ]
 
 

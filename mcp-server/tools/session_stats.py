@@ -23,7 +23,7 @@ from tools._common import crypto_only_error
 
 # Cap the lookback so a single call stays polite to Binance's rate limits.
 # 180 days × 24h = 4320 1H candles ≈ 5 paged requests (1000/page).
-_MAX_DAYS = 180
+_MAX_DAYS = 365
 _MIN_CANDLES = 48  # backend's floor; below this aggregation is meaningless
 
 
@@ -223,7 +223,7 @@ def _agg_day_of_week(ranges: dict[str, list[dict]]) -> dict:
 
 def register(mcp) -> None:
     @mcp.tool()
-    async def compute_session_stats(symbol: str = "BTCUSDT", days: int = 90) -> dict:
+    async def compute_session_stats(symbol: str = "BTCUSDT", days: int = 180) -> dict:
         """Compute session statistics for a crypto symbol from live history.
 
         Fetches deep 1H candles from Binance (public, no API key), buckets them
@@ -237,7 +237,7 @@ def register(mcp) -> None:
 
         IMPORTANT — sample window: the hosted product aggregates over its FULL
         candle history (often a year+), but this tool only samples the last
-        ``days`` days it fetches live (default ~90). Rates here are a recent
+        ``days`` days it fetches live (default ~180). Rates here are a recent
         snapshot and will differ from the dashboard's long-run figures; cite the
         sample size (``window.days``) when interpreting.
 
@@ -245,8 +245,9 @@ def register(mcp) -> None:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
                 ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
                 supported in this slice.
-            days: Lookback window in days (1H candles), capped at 180. Each day
-                yields up to 3 session events; ~60+ days gives stable rates.
+            days: Lookback window in days (1H candles), capped at 365. Each day
+                yields up to 3 session events; ~60+ days gives stable rates,
+                and the deeper default (~180) tightens them further.
 
         Returns:
             A dict with ``symbol``; ``window`` (``candles``, ``from``, ``to``
