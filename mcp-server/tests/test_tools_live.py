@@ -30,6 +30,8 @@ EXPECTED_TOOLS = {
     "compute_session_extension_stats", "get_session_forecast", "get_price_action",
     # third wave
     "run_backtest", "discover_edges",
+    # fourth wave
+    "calc_position_size", "get_candles", "backtest_rr",
 }
 
 CASES = [
@@ -55,6 +57,9 @@ CASES = [
     ("get_price_action", {"symbol": "BTCUSDT", "timeframe": "1h", "limit": 120}, "patterns"),
     ("run_backtest", {"symbol": "BTCUSDT", "event_type": "london_sweep", "days": 90}, "outcomes"),
     ("discover_edges", {"symbol": "BTCUSDT", "days": 120, "min_samples": 8}, "edges"),
+    ("calc_position_size", {"account_equity": 10000, "risk_pct": 1, "entry": 100, "stop": 95}, "position_size_units"),
+    ("get_candles", {"symbol": "BTCUSDT", "timeframe": "1h", "limit": 50}, "candles"),
+    ("backtest_rr", {"symbol": "BTCUSDT", "event_type": "london_sweep", "days": 90}, "stats"),
 ]
 
 
@@ -73,7 +78,8 @@ def test_tool_returns_clean_payload(name, args, key):
 
 @pytest.mark.live
 def test_forex_guard_consistent():
-    # Spot tools reject forex symbols with the shared guard message.
-    for name in ("analyze_smc", "get_levels", "get_derivatives", "get_volatility"):
+    # Only the crypto-only tools reject forex symbols (OANDA has no tick or
+    # futures data). Everything else is forex-capable when RF_OANDA_TOKEN is set.
+    for name in ("get_orderflow", "get_derivatives"):
         payload = _call(name, {"symbol": "EUR_USD"})
         assert "error" in payload and "forex" in payload["error"].lower()

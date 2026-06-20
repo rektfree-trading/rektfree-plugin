@@ -24,14 +24,43 @@ DEFAULT_WATCHLIST = [
     "XRPUSDT", "DOGEUSDT", "AVAXUSDT", "LINKUSDT",
 ]
 
+# Liquid OANDA forex/metals pairs (need RF_OANDA_TOKEN). Underscore → OANDA.
+FOREX_WATCHLIST = [
+    "EUR_USD", "GBP_USD", "USD_JPY", "AUD_USD", "USD_CAD", "XAU_USD",
+]
+
+# Major stock indices via OANDA (CFDs). Same token as forex; underscore → OANDA.
+INDEX_WATCHLIST = [
+    "NAS100_USD", "SPX500_USD", "US30_USD", "DE30_EUR", "UK100_GBP",
+]
+
+# Preset keyword → watchlist. The whole ``symbols`` string (case-insensitive)
+# can be one of these instead of explicit symbols.
+_PRESETS = {
+    "crypto": DEFAULT_WATCHLIST,
+    "forex": FOREX_WATCHLIST,
+    "fx": FOREX_WATCHLIST,
+    "metals": FOREX_WATCHLIST,
+    "indices": INDEX_WATCHLIST,
+    "index": INDEX_WATCHLIST,
+}
+
 # Cap the fan-out so one call can't hammer Binance (each symbol = 2 fetches).
 MAX_SYMBOLS = 15
 
 
 def _parse_symbols(symbols: str) -> list[str]:
-    """Parse a comma/space-separated symbol string into a clean upper list."""
+    """Parse a comma/space-separated symbol string into a clean upper list.
+
+    Empty → the crypto default watchlist. A single preset keyword as the whole
+    string ("forex"/"fx"/"metals"/"indices"/"index"/"crypto", case-insensitive)
+    → the matching watchlist. Otherwise treat the string as explicit symbols.
+    """
     if not symbols or not symbols.strip():
         return list(DEFAULT_WATCHLIST)
+    preset = _PRESETS.get(symbols.strip().lower())
+    if preset is not None:
+        return list(preset)
     raw = symbols.replace(",", " ").split()
     seen: set[str] = set()
     out: list[str] = []
@@ -61,10 +90,16 @@ def register(mcp) -> None:
 
         Args:
             symbols: Comma/space-separated symbols, e.g. ``"BTCUSDT, ETHUSDT,
-                SOLUSDT"``. Empty → a default liquid watchlist. Capped at 15.
-                Forex/metals (e.g. ``EUR_USD``, ``XAU_USD``) ARE supported when
-                ``RF_OANDA_TOKEN`` is set (they route to OANDA); crypto needs no
-                key. Symbols that fail are reported under ``errors``.
+                SOLUSDT"``. Empty → a default liquid crypto watchlist. Capped at
+                15. Forex/metals (e.g. ``EUR_USD``, ``XAU_USD``) and stock
+                indices (e.g. ``NAS100_USD``, ``SPX500_USD``) ARE supported when
+                ``RF_OANDA_TOKEN`` is set (any underscore symbol routes to
+                OANDA); crypto needs no key. You may also pass a single PRESET
+                keyword as the whole string (case-insensitive): ``"crypto"``,
+                ``"forex"``/``"fx"``, ``"metals"``, or ``"indices"``/``"index"``
+                — these expand to curated watchlists (forex/metals/indices
+                presets need ``RF_OANDA_TOKEN``). Symbols that fail are reported
+                under ``errors``.
             only_actionable: When true, ``ranked`` includes only setups that meet
                 the confluence ``min_score`` (the rest are summarized in
                 ``filtered_out``).

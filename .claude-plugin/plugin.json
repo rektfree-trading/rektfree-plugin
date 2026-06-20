@@ -2,12 +2,13 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "rektfree-plugin",
   "displayName": "RektFree",
-  "version": "0.3.0",
-  "description": "Smart Money Concepts (SMC) market analysis for crypto. Claude reads the structure — order blocks, FVGs, BOS/CHoCH, liquidity sweeps — straight from Binance, no API keys.",
+  "version": "0.4.0",
+  "description": "Smart Money Concepts (SMC) market analysis where Claude reads the structure — order blocks, FVGs, BOS/CHoCH, liquidity sweeps — across crypto (Binance, keyless) and forex, metals, and indices (OANDA, bring your own token).",
   "author": {
     "name": "RektFree"
   },
-  "keywords": ["trading", "crypto", "smc", "smart-money-concepts", "technical-analysis", "binance"],
-  "license": "UNLICENSED",
+  "homepage": "https://github.com/rektfree-trading/rektfree-plugin",
+  "keywords": ["trading", "crypto", "forex", "indices", "smc", "smart-money-concepts", "technical-analysis", "binance"],
+  "license": "MIT",
   "mcpServers": "./.mcp.json"
 }

@@ -10,10 +10,13 @@ Request: `$ARGUMENTS`
 
 Steps:
 
-1. Parse the request. The first token is the Binance symbol (default `BTCUSDT`
-   if none given). Accept friendly forms like "btc" → `BTCUSDT`, "eth" →
-   `ETHUSDT`, "sol" → `SOLUSDT`. No timeframe argument — the scan always stacks
-   1H entry structure against the 4H bias.
+1. Parse the request. The first token is the symbol (default `BTCUSDT` if none
+   given). Accept friendly forms like "btc" → `BTCUSDT`, "eth" → `ETHUSDT`,
+   "sol" → `SOLUSDT`. Underscore symbols route to OANDA and need
+   `RF_OANDA_TOKEN`: forex/metals (`EUR_USD`, `XAU_USD`) and stock indices
+   (`NAS100_USD`/Nasdaq, `SPX500_USD`/S&P 500, `US30_USD`/Dow) all grade the
+   same way. No timeframe argument — the scan always stacks 1H entry structure
+   against the 4H bias.
 2. Call the `scan_confluence` MCP tool (server: `rektfree`) with that symbol.
 3. Interpret the JSON using the scan skill. Do NOT dump the raw factor list —
    synthesize a verdict: the score vs `min_score`, the direction and whether it
@@ -31,8 +34,9 @@ Steps:
    killzone/silver-bullet factors, if present, carry **zero weight** (kept for
    context after recalibration). Treat the score as a confluence checklist, not
    a black-box signal.
-6. If the tool returns an `error` (e.g. a forex pair, or an unknown symbol), say
-   so plainly and suggest a valid crypto symbol.
+6. If the tool returns an `error` (e.g. an unknown symbol, or a forex/index
+   symbol with no `RF_OANDA_TOKEN` set), say so plainly — for the token case,
+   point to forex setup; otherwise suggest a valid symbol.
 
 Keep it concise and decision-oriented — a trader should be able to act on it,
 with the risk clearly framed.

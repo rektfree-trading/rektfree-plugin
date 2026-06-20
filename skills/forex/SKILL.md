@@ -43,13 +43,29 @@ Forex/metals use OANDA's underscore format — that's exactly the plugin's forex
 convention: `EUR_USD`, `GBP_USD`, `USD_JPY`, `AUD_USD`, `XAU_USD` (gold),
 `XAG_USD` (silver), etc. Crypto stays separator-free (`BTCUSDT`).
 
+**Stock indices work too**, through the *same* OANDA token — no extra config.
+They're underscore symbols, so they route to OANDA exactly like forex:
+
+- `NAS100_USD` — Nasdaq 100
+- `SPX500_USD` — S&P 500
+- `US30_USD` — Dow Jones (Wall Street 30)
+- `DE30_EUR` — DAX (Germany 40)
+- `UK100_GBP` — FTSE 100
+- `JP225_USD` — Nikkei 225
+
+If forex is already set up, indices need nothing more — the same `RF_OANDA_TOKEN`
+unlocks them.
+
 ## What works on forex
 
 All the structural/stat tools: `analyze_smc`, `get_levels`, `get_market_profile`,
 `get_price_action`, `scan_confluence` / `scan_market`, `get_volatility`,
 `get_correlations`, `get_daily_bias`, `get_ict_concepts`, `get_session_forecast`,
 all the `compute_*_stats`, `run_backtest`, `discover_edges`. Sessions/killzones
-apply too — and forex respects them more literally than 24/7 crypto.
+apply too — and forex respects them more literally than 24/7 crypto. The same
+tools work on the index symbols above (`NAS100_USD`, `SPX500_USD`, …). For
+`scan_market` you can also pass a preset keyword as the whole `symbols` string:
+`forex`/`fx`, `metals`, or `indices`/`index` (all need the OANDA token).
 
 **Not available for forex:** `get_orderflow` (no tick/footprint data) and
 `get_derivatives` (no perp funding/OI). Those return a crypto-only message.
@@ -58,6 +74,10 @@ apply too — and forex respects them more literally than 24/7 crypto.
 
 - **Markets close on weekends** (Fri 21:00 → Sun 21:00 UTC). On weekends OANDA
   returns the last completed candles, so an intraday read may be stale — say so.
+- **Indices follow exchange hours, not FX's 24/5.** A cash index (`NAS100_USD`,
+  `SPX500_USD`, `US30_USD`, etc.) only prints during its exchange session, so
+  off-hours reads can be stale (last completed candles) — flag it the same way
+  you'd flag a weekend forex read.
 - **Practice vs live** pricing can differ slightly; it's fine for analysis.
 - No macro/news awareness (same as crypto) — high-impact data can override the
   technical read.

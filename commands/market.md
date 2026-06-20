@@ -12,7 +12,13 @@ Steps:
 
 1. Parse the request. If symbols are given (e.g. "btc eth sol" or
    "BTCUSDT, SOLUSDT"), pass them through; accept "btc"→`BTCUSDT`, etc. If none
-   are given, leave `symbols` empty to use the default liquid watchlist.
+   are given, leave `symbols` empty to use the default liquid crypto watchlist.
+   For non-crypto markets you can pass a single **preset keyword** as the whole
+   `symbols` string (case-insensitive): `crypto`, `forex`/`fx`, `metals`, or
+   `indices`/`index` — these expand to a curated watchlist. The forex, metals,
+   and indices presets (and any individual underscore symbol like `EUR_USD`,
+   `XAU_USD`, or an index such as `NAS100_USD`, `SPX500_USD`, `US30_USD`) route
+   to OANDA and **need `RF_OANDA_TOKEN`** set; crypto needs no key.
 2. Call the `scan_market` MCP tool (server: `rektfree`) with those symbols. If
    the user only wants tradable setups, pass `only_actionable: true`.
 3. Interpret the ranked results with the scan/confluence skill. Lead with the

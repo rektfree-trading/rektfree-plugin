@@ -66,6 +66,13 @@ use OANDA, which requires *your own* API token — the plugin never ships one.
 3. **Fully restart Claude Code** (so the server picks up the new environment),
    then try `/smc EUR_USD 1h`. If needed, reconnect once via `/mcp`.
 
+The **same OANDA token also unlocks stock indices** (CFDs) — `NAS100_USD`
+(Nasdaq 100), `SPX500_USD` (S&P 500), `US30_USD` (Dow), `DE30_EUR` (DAX),
+`UK100_GBP` (FTSE), `JP225_USD` (Nikkei) — and CFD metals like `XAU_USD` (gold)
+and `XAG_USD` (silver). No extra setup: any underscore symbol routes to OANDA.
+Indices follow their exchange's hours (not FX's 24/5), so off-hours reads may be
+stale.
+
 Notes: never paste your token into the chat — it belongs only in your
 environment. All structural/stat tools work on forex; `get_orderflow` and
 `get_derivatives` stay crypto-only (OANDA has no tick/futures data). Forex markets

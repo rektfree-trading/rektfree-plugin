@@ -3,7 +3,7 @@
 ![RektFree — Claude for the trader: SMC, order flow, levels, and stats inside one Claude Code plugin](docs/images/hero.png)
 
 **Claude for traders.** A self-contained [Claude Code](https://code.claude.com)
-plugin for full-stack **crypto, forex & metals** market analysis — **Smart Money
+plugin for full-stack **crypto, forex, metals & indices** market analysis — **Smart Money
 Concepts (SMC)**, **key levels**, **Market Profile**, **order flow**, **confluence
 scoring & market scan**, a deep **stats layer** (session / SMC hit-rates / PDH-PDL
 / Initial-Balance / day-type / extension), **daily bias & ICT concepts**, **session
@@ -13,18 +13,35 @@ with **Claude itself as the analyst**.
 
 The plugin ships RektFree's pure-Python analysis engines behind a small MCP
 server. Claude calls a tool to fetch live **Binance** (crypto, keyless) or
-**OANDA** (forex/metals, your token) data, runs the analysis, and interprets the
+**OANDA** (forex, metals & stock indices, your token) data, runs the analysis, and interprets the
 structure for you. There are no AI-provider API keys to manage — the model you're
 already talking to *is* the brain.
 
-> **Status: v0.3.** **22 tools** spanning structure, levels, value, flow,
+### Markets covered
+
+| Market | Venue | Setup | Example symbols |
+| --- | --- | --- | --- |
+| **Crypto** | Binance (spot + futures) | **Keyless** — no account | `BTCUSDT`, `ETHUSDT`, `SOLUSDT` |
+| **Forex** | OANDA | Your `RF_OANDA_TOKEN` | `EUR_USD`, `GBP_USD`, `USD_JPY` |
+| **Metals** | OANDA | Same token | `XAU_USD` (gold), `XAG_USD` (silver) |
+| **Stock indices** | OANDA | Same token | `NAS100_USD` (Nasdaq), `SPX500_USD` (S&P 500), `US30_USD` (Dow), `DE30_EUR` (DAX), `UK100_GBP` (FTSE), `JP225_USD` (Nikkei) |
+
+The router is convention-based: a separator-free symbol (`BTCUSDT`) goes to
+Binance; any underscore symbol (`EUR_USD`, `XAU_USD`, `NAS100_USD`) goes to
+OANDA. **One OANDA token unlocks forex, metals *and* indices** — no extra setup.
+Indices follow their exchange's hours (not FX's 24/5), so off-hours reads may be
+stale.
+
+> **Status: v0.4.** **25 tools** spanning structure, levels, value, flow,
 > derivatives, a broad stats layer (session, SMC hit-rates, PDH/PDL, Initial
 > Balance, day-type, session-extension), daily bias, ICT concepts, session
-> forecasting, price-action patterns, volatility, correlation, plus an
-> **in-memory backtester** and **edge-discovery** — and `/analyze`, `/brief`,
+> forecasting, price-action patterns, volatility, correlation, **position
+> sizing / risk**, **raw candles**, plus an **in-memory backtester** (frequency
+> + R-multiple equity curve) and **edge-discovery** — and `/analyze`, `/brief`,
 > `/strategy` synthesis layers with interpretation skills (multi-timeframe,
 > killzone). **26 commands, 26 skills.** **Crypto is keyless** (Binance spot +
-> futures); **forex & metals** (EUR_USD, XAU_USD…) work with your own OANDA token.
+> futures); **forex, metals & stock indices** (EUR_USD, XAU_USD, NAS100_USD…)
+> work with your own OANDA token.
 > Install is one step — the server self-bootstraps its deps (see `SETUP.md`).
 
 ## Quick start
@@ -41,6 +58,8 @@ Then just ask ("what's the setup on ETH?") or run a command:
 /scan                 # rank the market for the best setups right now
 /brief                # pre-session game plan (session clock + stats + plan)
 /smc EUR_USD 1h       # forex/metals too (needs your OANDA token — see SETUP.md)
+/smc NAS100_USD 1h    # stock indices too — same OANDA token, no extra setup
+/scan indices         # preset watchlist scans: forex / fx / metals / indices
 ```
 
 First launch auto-installs the server's dependencies (~10–30s). If the very first
@@ -103,8 +122,9 @@ killzones, confluence, a watchlist, and invalidation, in one flow:
 - **No manual dependency install** — on first launch the server self-bootstraps
   its deps (`mcp`, `httpx`) into an isolated cache-dir venv. See `SETUP.md`.
 - Network access to `api.binance.com` (public, no account) for crypto.
-- **Forex/metals (optional):** your own OANDA API token via `RF_OANDA_TOKEN` —
-  see `SETUP.md` or just ask Claude "how do I set up forex?".
+- **Forex, metals & stock indices (optional):** your own OANDA API token via
+  `RF_OANDA_TOKEN` — one token covers all three (`EUR_USD`, `XAU_USD`,
+  `NAS100_USD`…). See `SETUP.md` or just ask Claude "how do I set up forex?".
 
 ## Install
 
