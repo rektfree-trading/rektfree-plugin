@@ -26,9 +26,9 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from data import binance
+from data import market
 from engines import session_extension_stats as ext_engine
 from engines import session_stats as sess_engine
-from tools._common import crypto_only_error
 
 _MAX_DAYS = 180
 _MIN_DAYS = 5
@@ -263,8 +263,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             days: Lookback window in days (1H candles), capped at 180. ~60+ days
                 gives stable rates.
 
@@ -275,15 +276,12 @@ def register(mcp) -> None:
             distribution); ``daily_direction``; and ``hod_lod``. On failure, a
             dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         days = max(1, min(int(days), _MAX_DAYS))
         total = days * 24
         max_pages = max(2, (total // 1000) + 2)
 
         try:
-            raw = await binance.fetch_candles_paged(symbol, "1h", total=total, max_pages=max_pages)
+            raw = await market.fetch_candles_paged(symbol, "1h", total=total, max_pages=max_pages)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

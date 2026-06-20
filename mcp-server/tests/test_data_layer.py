@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from data import binance
+from data import binance, market, oanda
 from tools._common import bias_str, crypto_only_error
 from engines import smart_money
 
@@ -125,3 +125,36 @@ def test_request_json_network_error_retried():
     out = asyncio.run(binance.request_json(client, "klines", {"symbol": "X"}))
     assert out == {"ok": 1}
     assert client.calls == 2
+
+
+# --- forex routing / OANDA (offline) --------------------------------------
+
+def test_market_is_forex():
+    assert market.is_forex("EUR_USD") is True
+    assert market.is_forex("XAU_USD") is True
+    assert market.is_forex("BTCUSDT") is False
+
+
+def test_oanda_granularity_map():
+    assert oanda.normalize_granularity("1h") == "H1"
+    assert oanda.normalize_granularity("4h") == "H4"
+    assert oanda.normalize_granularity("1d") == "D"
+    with pytest.raises(binance.BinanceError):
+        oanda.normalize_granularity("3h")
+
+
+def test_oanda_token_placeholder_treated_as_unset(monkeypatch):
+    monkeypatch.setenv("RF_OANDA_TOKEN", "${RF_OANDA_TOKEN}")  # unresolved substitution
+    assert oanda.has_token() is False
+    monkeypatch.setenv("RF_OANDA_TOKEN", "")
+    assert oanda.has_token() is False
+    monkeypatch.delenv("RF_OANDA_TOKEN", raising=False)
+    assert oanda.has_token() is False
+
+
+def test_forex_without_token_gives_setup_error(monkeypatch):
+    monkeypatch.delenv("RF_OANDA_TOKEN", raising=False)
+    with pytest.raises(binance.BinanceError) as exc:
+        asyncio.run(market.fetch_candles("EUR_USD", "1h", 100))
+    msg = str(exc.value)
+    assert "OANDA" in msg and "RF_OANDA_TOKEN" in msg

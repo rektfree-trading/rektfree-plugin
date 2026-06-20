@@ -15,7 +15,6 @@ from __future__ import annotations
 import asyncio
 from datetime import datetime, timezone
 
-from tools._common import crypto_only_error
 from tools.confluence import grade_symbol
 
 # Default watchlist — liquid Binance USDT perps/pairs. Override via the
@@ -61,10 +60,11 @@ def register(mcp) -> None:
         and NO macro/DB inputs — read it as a confluence checklist, not a signal.
 
         Args:
-            symbols: Comma/space-separated Binance crypto symbols (no separator),
-                e.g. ``"BTCUSDT, ETHUSDT, SOLUSDT"``. Empty → a default liquid
-                watchlist. Capped at 15. Forex pairs (with ``_``) are skipped
-                and reported under ``errors``.
+            symbols: Comma/space-separated symbols, e.g. ``"BTCUSDT, ETHUSDT,
+                SOLUSDT"``. Empty → a default liquid watchlist. Capped at 15.
+                Forex/metals (e.g. ``EUR_USD``, ``XAU_USD``) ARE supported when
+                ``RF_OANDA_TOKEN`` is set (they route to OANDA); crypto needs no
+                key. Symbols that fail are reported under ``errors``.
             only_actionable: When true, ``ranked`` includes only setups that meet
                 the confluence ``min_score`` (the rest are summarized in
                 ``filtered_out``).
@@ -87,14 +87,11 @@ def register(mcp) -> None:
                 )
             }
 
-        # Skip obvious forex up front (keeps the gather to gradeable symbols).
+        # Grade every requested symbol. Crypto routes to Binance; forex/metals
+        # route to OANDA. A forex symbol without a token surfaces its routing
+        # error naturally via grade_symbol → the ``errors`` list below.
         errors: list[dict] = []
-        to_grade: list[str] = []
-        for sym in wanted:
-            if err := crypto_only_error(sym):
-                errors.append({"symbol": sym, "error": err["error"]})
-            else:
-                to_grade.append(sym)
+        to_grade: list[str] = list(wanted)
 
         results = await asyncio.gather(*(grade_symbol(s) for s in to_grade))
 

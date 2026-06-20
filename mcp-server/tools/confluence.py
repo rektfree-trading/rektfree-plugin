@@ -19,30 +19,28 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from data import binance
+from data import market
 from engines import confluence as confluence_engine
 from engines import smart_money
-from tools._common import crypto_only_error
 
 
 async def grade_symbol(symbol: str) -> dict:
-    """Score one crypto symbol's confluence and return the grade payload.
+    """Score one symbol's confluence and return the grade payload.
 
     Shared by the ``scan_confluence`` tool (single symbol) and ``scan_market``
     (watchlist), so both use identical fetch + SMC + scoring logic. Returns the
-    grade dict on success, or ``{"error": ...}`` on a forex symbol, fetch
-    failure, or insufficient data.
+    grade dict on success, or ``{"error": ...}`` on a fetch failure or
+    insufficient data. Crypto routes to Binance; forex/metals (e.g.
+    ``EUR_USD``, ``XAU_USD``) route to OANDA when ``RF_OANDA_TOKEN`` is set.
     """
-    if err := crypto_only_error(symbol):
-        return err
-
     # 1H drives the entry/structure; 4H gives the higher-timeframe bias.
     # 300 candles each: ~12.5 days on 1H and ~50 days on 4H — enough for
     # stable swings, ATR, and a recent TPO session. Mirrors the backend's
     # 1H+4H scan inputs (it fetches 200×1H / 100×4H; we fetch more for
     # steadier structure since we have no DB-cached history to fall back on).
     try:
-        candles_1h = await binance.fetch_candles(symbol, "1h", 300)
-        candles_4h = await binance.fetch_candles(symbol, "4h", 300)
+        candles_1h = await market.fetch_candles(symbol, "1h", 300)
+        candles_4h = await market.fetch_candles(symbol, "4h", 300)
     except binance.BinanceError as exc:
         return {"error": str(exc)}
 
@@ -138,8 +136,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
 
         Returns:
             A dict with ``symbol``, ``last_price``, ``score``, ``min_score``,

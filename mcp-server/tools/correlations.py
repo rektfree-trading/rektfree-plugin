@@ -1,14 +1,15 @@
 """
-``get_correlations`` — cross-asset correlation for crypto (keyless).
+``get_correlations`` — cross-asset correlation.
 
-Fetches aligned Binance candles for a watchlist (or a single symbol vs a base),
+Fetches aligned candles for a watchlist (or a single symbol vs a base),
 computes log-return Pearson correlations — a full symmetric matrix plus each
 symbol vs the base (default ``BTCUSDT``) — and a recent-vs-older regime shift so
 the model can read whether the market is tightening to BTC (risk-on rotation /
 everything-follows-BTC) or decoupling (diversification showing up).
 
 Pure-Python math lives in ``engines/correlations.py``; this module only fetches,
-aligns, and shapes the JSON. Crypto only — forex (``_``) symbols are skipped.
+aligns, and shapes the JSON. Crypto routes to Binance (keyless); forex/metals
+(e.g. ``EUR_USD``, ``XAU_USD``) route to OANDA when ``RF_OANDA_TOKEN`` is set.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import asyncio
 from datetime import datetime, timezone
 
 from data import binance
+from data import market
 from engines import correlations as corr
 
 # Default watchlist when no symbols are given — liquid USDT pairs, BTC-led.
@@ -67,10 +69,11 @@ def register(mcp) -> None:
         interpret — confirmation, diversification, and doubled-up risk.
 
         Args:
-            symbols: Comma/space-separated Binance crypto symbols, e.g.
-                ``"ETHUSDT, SOLUSDT"``. Empty → a default watchlist
-                (BTC/ETH/SOL/BNB/XRP). The ``base`` is always included. Capped
-                at 10 symbols. Forex pairs (with ``_``) are skipped.
+            symbols: Comma/space-separated symbols, e.g. ``"ETHUSDT, SOLUSDT"``.
+                Empty → a default watchlist (BTC/ETH/SOL/BNB/XRP). The ``base``
+                is always included. Capped at 10 symbols. Forex/metals (e.g.
+                ``EUR_USD``, ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN``
+                is set (they route to OANDA); crypto needs no key.
             base: The reference symbol every other is measured against. Default
                 ``BTCUSDT`` — for crypto, BTC is the market's beta anchor.
             timeframe: Candle interval, one of 1m/5m/15m/1h/4h/1d/1w (aliases
@@ -89,22 +92,11 @@ def register(mcp) -> None:
         base = (base or "BTCUSDT").strip().upper()
         skipped: list[dict] = []
 
-        # Base must be crypto — it anchors every correlation.
-        if "_" in base:
-            return {
-                "error": (
-                    f"base '{base}' looks like a forex pair. get_correlations "
-                    "only supports keyless crypto symbols (e.g. BTCUSDT)."
-                )
-            }
-
-        # Build the symbol set: requested + base, dedup, drop forex, cap.
+        # Build the symbol set: requested + base, dedup, cap. Crypto and
+        # forex/metals are both allowed — each routes via the market layer.
         requested = _parse_symbols(symbols)
         wanted: list[str] = [base]
         for s in requested:
-            if "_" in s:
-                skipped.append({"symbol": s, "reason": "forex pair (not supported)"})
-                continue
             if s not in wanted:
                 wanted.append(s)
 
@@ -115,7 +107,7 @@ def register(mcp) -> None:
 
         if len(wanted) < 2:
             return {
-                "error": "Need at least 2 crypto symbols (base + one more) to correlate.",
+                "error": "Need at least 2 symbols (base + one more) to correlate.",
                 "skipped": skipped,
             }
 
@@ -123,7 +115,7 @@ def register(mcp) -> None:
         # whole call — fold its error into `skipped` instead.
         async def _fetch(sym: str):
             try:
-                return sym, await binance.fetch_candles(sym, timeframe, limit), None
+                return sym, await market.fetch_candles(sym, timeframe, limit), None
             except binance.BinanceError as exc:
                 return sym, None, str(exc)
 

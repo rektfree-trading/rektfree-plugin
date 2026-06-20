@@ -27,8 +27,8 @@ from collections import Counter
 from datetime import datetime, timezone
 
 from data import binance
+from data import market
 from engines import event_query
-from tools._common import crypto_only_error
 
 # Lookback caps — match the session-stats tool so windows stay polite to Binance.
 _MAX_DAYS = 365
@@ -290,7 +290,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are rejected.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             event_type: The pattern to study. One of:
                 ``session_range``, ``asia_sweep`` (London sweeps Asia),
                 ``london_sweep`` (NY sweeps London), ``ny_continuation``,
@@ -321,9 +323,6 @@ def register(mcp) -> None:
             any ignored conditions). When ``event_type`` is empty, returns the
             list of valid event types with a hint. On failure, an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         if not event_type:
             return {
                 "error": "event_type is required.",
@@ -349,7 +348,7 @@ def register(mcp) -> None:
         max_pages = max(2, (total // 1000) + 2)
 
         try:
-            raw = await binance.fetch_candles_paged(
+            raw = await market.fetch_candles_paged(
                 symbol, "1h", total=total, max_pages=max_pages
             )
         except binance.BinanceError as exc:

@@ -8,8 +8,9 @@ JSON that mirrors the backend's /market/smc payload shape.
 from __future__ import annotations
 
 from data import binance
+from data import market
 from engines import smart_money
-from tools._common import bias_str, crypto_only_error
+from tools._common import bias_str
 
 
 def _swing_params(timeframe: str) -> tuple[int, int]:
@@ -138,8 +139,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             timeframe: One of 1m, 5m, 15m, 1h, 4h, 1d, 1w. Default ``1h``.
             limit: Number of candles to analyze (50–1000). Default 500. More
                 candles give longer-range structure; fewer give a tighter
@@ -152,11 +154,8 @@ def register(mcp) -> None:
             liquidity_sweeps, breaker_blocks, sweep_areas, and strong/weak/swing
             levels). On failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         try:
-            candles = await binance.fetch_candles(symbol, timeframe, limit)
+            candles = await market.fetch_candles(symbol, timeframe, limit)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

@@ -12,8 +12,8 @@ sizing, stop/target distances, and "is it about to move?" calls.
 from __future__ import annotations
 
 from data import binance
+from data import market
 from engines import volatility as vol_engine
-from tools._common import crypto_only_error
 
 
 def register(mcp) -> None:
@@ -38,8 +38,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             timeframe: Intraday timeframe for ATR/Bollinger/realized-vol —
                 1m/5m/15m/1h/4h (aliases accepted). Default ``1h``. ADR always
                 uses daily candles regardless of this.
@@ -55,9 +56,6 @@ def register(mcp) -> None:
             currency; ``*_pct`` fields are percent of last price. On failure, a
             dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         atr_period = max(1, int(atr_period))
         adr_days = max(1, int(adr_days))
 
@@ -79,8 +77,8 @@ def register(mcp) -> None:
         # ADR uses daily candles; the last (current) day is partial so we average
         # the prior `adr_days` *completed* days and treat the latest as "today".
         try:
-            intraday = await binance.fetch_candles(symbol, timeframe, intraday_limit)
-            daily = await binance.fetch_candles(symbol, "1d", adr_days + 2)
+            intraday = await market.fetch_candles(symbol, timeframe, intraday_limit)
+            daily = await market.fetch_candles(symbol, "1d", adr_days + 2)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

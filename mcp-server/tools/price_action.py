@@ -11,8 +11,8 @@ analysis (SMC, levels, profile, …). The model interprets these shapes in conte
 from __future__ import annotations
 
 from data import binance
+from data import market
 from engines import price_action as pa_engine
-from tools._common import crypto_only_error
 
 # Cap how many of the most-recent detections we return. Pattern shapes fire
 # constantly on noisy data; the recent ones are the only actionable ones.
@@ -44,8 +44,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             timeframe: Candle timeframe — one of 1m/5m/15m/1h/4h/1d/1w (aliases
                 accepted). Defaults to ``1h``.
             limit: Number of candles to scan (1–1000, capped by Binance).
@@ -59,11 +60,8 @@ def register(mcp) -> None:
             to ~20). Each pattern is ``{pattern, key, index, time, direction,
             span, high, low}``. On failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         try:
-            candles = await binance.fetch_candles(symbol, timeframe, limit)
+            candles = await market.fetch_candles(symbol, timeframe, limit)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

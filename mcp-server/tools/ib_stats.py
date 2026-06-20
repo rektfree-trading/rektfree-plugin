@@ -22,8 +22,8 @@ from datetime import datetime, timezone
 from statistics import mean, median
 
 from data import binance
+from data import market
 from engines import ib_stats as engine
-from tools._common import crypto_only_error
 
 # 5m IB resolution is data-heavy (288 candles/day). Cap the window so a single
 # call stays polite — ~45 days × 288 = ~13k candles ≈ 13 paged requests.
@@ -221,8 +221,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             days: Lookback window in days, capped at 60 (5m data is heavy).
                 ~30+ days gives stable rates.
 
@@ -234,9 +235,6 @@ def register(mcp) -> None:
             extension + size-to-extension ratio distributions, each with ``n``);
             and ``day_of_week``. On failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         days = max(1, min(int(days), _MAX_DAYS))
         total_m5 = days * 288  # 288 five-minute candles per day
         m5_pages = max(2, min(_DEFAULT_M5_PAGES, (total_m5 // 1000) + 2))
@@ -244,10 +242,10 @@ def register(mcp) -> None:
         h1_pages = max(2, (total_h1 // 1000) + 2)
 
         try:
-            raw_m5 = await binance.fetch_candles_paged(
+            raw_m5 = await market.fetch_candles_paged(
                 symbol, "5m", total=total_m5, max_pages=m5_pages
             )
-            raw_h1 = await binance.fetch_candles_paged(
+            raw_h1 = await market.fetch_candles_paged(
                 symbol, "1h", total=total_h1, max_pages=h1_pages
             )
         except binance.BinanceError as exc:

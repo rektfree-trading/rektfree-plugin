@@ -18,8 +18,8 @@ from collections import defaultdict
 from datetime import datetime, timezone
 
 from data import binance
+from data import market
 from engines import session_stats as engine
-from tools._common import crypto_only_error
 
 # Cap the lookback so a single call stays polite to Binance's rate limits.
 # 180 days × 24h = 4320 1H candles ≈ 5 paged requests (1000/page).
@@ -243,8 +243,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             days: Lookback window in days (1H candles), capped at 365. Each day
                 yields up to 3 session events; ~60+ days gives stable rates,
                 and the deeper default (~180) tightens them further.
@@ -259,16 +260,13 @@ def register(mcp) -> None:
             occurrence rate); and ``day_of_week`` (per-session weekday
             breakdown). On failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         days = max(1, min(int(days), _MAX_DAYS))
         total = days * 24
         # ~1000 candles/page; pad max_pages so the full window is fetchable.
         max_pages = max(2, (total // 1000) + 2)
 
         try:
-            raw = await binance.fetch_candles_paged(symbol, "1h", total=total, max_pages=max_pages)
+            raw = await market.fetch_candles_paged(symbol, "1h", total=total, max_pages=max_pages)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

@@ -29,10 +29,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from data import binance
+from data import market
 from engines import session_stats as ss
 from engines import session_forecast as fc
 from tools import session_clock
-from tools._common import crypto_only_error
 
 # Same fetch envelope as tools/session_stats.py — polite to Binance rate limits.
 _MAX_DAYS = 180
@@ -167,8 +167,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             days: Lookback window in days (1H candles), capped at 180. ~60+ days
                 gives stable rates; thin windows make the ``n`` small.
 
@@ -183,15 +184,12 @@ def register(mcp) -> None:
             ``projected_levels`` (anchor price, projected high/low, prior-session
             high/low); and a ``disclaimer``. On failure, a dict with ``error``.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         days = max(1, min(int(days), _MAX_DAYS))
         total = days * 24
         max_pages = max(2, (total // 1000) + 2)
 
         try:
-            raw = await binance.fetch_candles_paged(symbol, "1h", total=total, max_pages=max_pages)
+            raw = await market.fetch_candles_paged(symbol, "1h", total=total, max_pages=max_pages)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

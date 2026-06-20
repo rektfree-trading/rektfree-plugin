@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from engines import smc_stats as smc_engine
 from data import binance
-from tools._common import crypto_only_error
+from data import market
 
 # How much 1H history to pull. ~5000 1H candles ≈ 208 days — a deeper window
 # for tighter hit-rate samples. Paged because a single Binance klines request
@@ -154,8 +154,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
 
         Returns:
             A dict with ``symbol``, ``window`` (``{candles, from, to}`` — the
@@ -164,11 +165,8 @@ def register(mcp) -> None:
             ``eq_test``, ``sweep_test``), each with rates (0–100%) plus a
             sample size ``n``. On failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         try:
-            candles = await binance.fetch_candles_paged(
+            candles = await market.fetch_candles_paged(
                 symbol, "1h", total=_TOTAL_CANDLES, max_pages=_MAX_PAGES
             )
         except binance.BinanceError as exc:

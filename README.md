@@ -1,7 +1,7 @@
 # RektFree Plugin
 
 A self-contained [Claude Code](https://code.claude.com) plugin for full-stack
-crypto market analysis — **Smart Money Concepts (SMC)**, **key levels**, **Market
+crypto **and forex/metals** market analysis — **Smart Money Concepts (SMC)**, **key levels**, **Market
 Profile**, **order flow**, **confluence scoring & market scan**, **session / SMC /
 PDH-PDL / Initial-Balance / day-type / extension stats**, **daily bias & ICT
 concepts**, **session forecasting**, **price-action patterns**, **volatility**,
@@ -13,14 +13,15 @@ server. Claude calls a tool to fetch live Binance data and run the analysis, the
 interprets the structure for you. There are no AI-provider API keys to manage —
 the model you're already talking to *is* the brain.
 
-> **Status: v0.2.** **22 tools** spanning structure, levels, value, flow,
+> **Status: v0.3.** **22 tools** spanning structure, levels, value, flow,
 > derivatives, a broad stats layer (session, SMC hit-rates, PDH/PDL, Initial
 > Balance, day-type, session-extension), daily bias, ICT concepts, session
 > forecasting, price-action patterns, volatility, correlation, plus an
 > **in-memory backtester** and **edge-discovery** — and `/analyze`, `/brief`,
 > `/strategy` synthesis layers with interpretation skills (multi-timeframe,
-> killzone). **26 commands, 25 skills**, crypto only (Binance spot + futures,
-> keyless). Forex (OANDA, BYO-token) is the main thing left.
+> killzone). **26 commands, 26 skills.** **Crypto is keyless** (Binance spot +
+> futures); **forex & metals** (EUR_USD, XAU_USD…) work with your own OANDA token.
+> Install is one step — the server self-bootstraps its deps (see `SETUP.md`).
 
 ## What you get
 
@@ -52,19 +53,16 @@ the model you're already talking to *is* the brain.
 | `/brief` command + `brief` skill | A forward-looking **pre-session brief**: anchors on the session clock (what session we're in, what's next, the killzone), then wraps `/analyze` + `compute_session_stats` into a session game-plan with statistical tendencies and an if-then watch-list. |
 | `/strategy` command + `strategy` skill | **Trade / strategy review**: paste your trades (or describe your approach) and Claude computes your stats, cross-references representative trades against the analysis tools, runs a gap analysis vs the RektFree framework, and returns a critique + improvement plan. |
 | Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/mtf` `/killzone` `/backtest` `/edges` — run a tool (or stack tools) and ask Claude for a trader-facing read. |
-| Auto-activating skills | One per tool/domain plus two pure-interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, **`mtf`** (multi-timeframe alignment), **`killzone`** (session timing) — turning the raw numbers into decision-oriented analysis. |
+| Auto-activating skills | One per tool/domain plus interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, **`mtf`** (multi-timeframe), **`killzone`** (session timing), **`forex`** (forex/metals setup) — turning the raw numbers into decision-oriented analysis. |
 
 ## Requirements
 
 - **Python 3.10+** on your PATH (`python3`).
-- The MCP server's two dependencies. Install them once:
-
-  ```bash
-  pip install -r mcp-server/requirements.txt
-  # (mcp, httpx)
-  ```
-
-- Network access to `api.binance.com` (public endpoint — no account needed).
+- **No manual dependency install** — on first launch the server self-bootstraps
+  its deps (`mcp`, `httpx`) into an isolated cache-dir venv. See `SETUP.md`.
+- Network access to `api.binance.com` (public, no account) for crypto.
+- **Forex/metals (optional):** your own OANDA API token via `RF_OANDA_TOKEN` —
+  see `SETUP.md` or just ask Claude "how do I set up forex?".
 
 ## Install
 
@@ -182,8 +180,8 @@ re-run the suite (see `PLUGIN_STATUS.md` in the backend repo).
 
 ## Roadmap
 
-- Forex/metals via OANDA (bring-your-own token) — `RF_OANDA_*` config is already
-  stubbed in `config.py`.
-- Deeper stat history — the on-the-fly stats currently sample the last ~3 months
-  of 1H (Binance paging); the hosted product uses full history.
-- A release tag once forex lands → **v0.2**.
+- ~~Forex/metals via OANDA (bring-your-own token)~~ ✅ shipped in v0.3 — set
+  `RF_OANDA_TOKEN`; all structural/stat tools route forex→OANDA, crypto→Binance.
+- Macro / economic-calendar awareness (would need a public calendar data source).
+- Deeper stat history — the on-the-fly stats sample recent 1H history (exchange
+  paging); the hosted product uses full history.

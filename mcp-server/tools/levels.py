@@ -8,8 +8,8 @@ backend's /market/levels payload shape (``{symbol, last_price, levels}``).
 from __future__ import annotations
 
 from data import binance
+from data import market
 from engines import levels as levels_engine
-from tools._common import crypto_only_error
 
 
 def _serialize_levels(result: levels_engine.LevelsResult) -> list[dict]:
@@ -74,8 +74,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
 
         Returns:
             A dict with ``symbol``, ``last_price``, and ``levels`` — a list of
@@ -85,13 +86,10 @@ def register(mcp) -> None:
             names (``Asia``, ``London``, ``New York``) with ``p`` prefix for the
             prior day. On failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         # 1000 × 15m ≈ 10.4 days — enough for daily/weekly/session levels and
         # the current month so far. Mirrors the backend's /market/levels fetch.
         try:
-            candles = await binance.fetch_candles(symbol, "15m", 1000)
+            candles = await market.fetch_candles(symbol, "15m", 1000)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

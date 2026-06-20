@@ -10,8 +10,8 @@ so the host model can read profile shape, value area, and POC migration.
 from __future__ import annotations
 
 from data import binance
+from data import market
 from engines import market_profile as profile_engine
-from tools._common import crypto_only_error
 
 # The plugin accepts lowercase timeframe tokens (matching binance.fetch_candles),
 # but the engine's `_get_session_boundaries` switches on the backend's
@@ -50,8 +50,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             timeframe: Candle timeframe — one of 1m/5m/15m/1h/4h/1d/1w (aliases
                 accepted). Determines how candles are grouped into sessions.
             limit: Number of candles to fetch (capped at 1000 by Binance).
@@ -68,11 +69,8 @@ def register(mcp) -> None:
             ``0`` for the still-open current session. On failure, a dict with an
             ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         try:
-            candles = await binance.fetch_candles(symbol, timeframe, limit)
+            candles = await market.fetch_candles(symbol, timeframe, limit)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

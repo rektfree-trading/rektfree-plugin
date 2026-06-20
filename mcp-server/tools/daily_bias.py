@@ -9,8 +9,9 @@ current_bias, ..., entries, stats}``).
 from __future__ import annotations
 
 from data import binance
+from data import market
 from engines import daily_bias as bias_engine
-from tools._common import bias_str, crypto_only_error
+from tools._common import bias_str
 
 
 def _format_pct(hit: int, total: int) -> float:
@@ -75,8 +76,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             period: ``D`` for daily bias (default) or ``W`` for weekly bias.
 
         Returns:
@@ -87,15 +89,12 @@ def register(mcp) -> None:
             bearish counts with success_rate and close_through_rate). On
             failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         p = "W" if period.strip().upper() == "W" else "D"
 
         # 1000 × 1h ≈ 41 days — enough daily periods for bias history and the
         # success-rate stats. Mirrors the backend's /market/bias fetch.
         try:
-            candles = await binance.fetch_candles(symbol, "1h", 1000)
+            candles = await market.fetch_candles(symbol, "1h", 1000)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 

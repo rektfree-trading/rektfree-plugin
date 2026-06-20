@@ -1,24 +1,28 @@
 """
 Optional runtime configuration for the RektFree MCP server.
 
-Everything here is optional — crypto analysis works with zero config because
-Binance's public endpoints need no key. Forex/OANDA support (future) will read
-its credentials from the ``RF_OANDA_*`` variables below.
+Crypto analysis needs zero config — Binance's public endpoints need no key.
+**Forex/metals** (OANDA) is bring-your-own-token: the user sets these environment
+variables and the server inherits them (see ``data/oanda.py``, which reads them
+directly). Never commit a token.
 
-Values are read from the process environment, which the plugin's MCP config can
-populate via ``${user_config.KEY}`` substitution (see ``.mcp.json``).
+    RF_OANDA_TOKEN   OANDA REST API token (required for forex/metals)
+    RF_OANDA_ENV     "practice" (default) or "live" — selects the OANDA host
+    RF_OANDA_BASE    optional full base-URL override (instead of RF_OANDA_ENV)
+
+Only the candles endpoint is used, which needs just the Bearer token — no account
+id. See ``SETUP.md`` and the ``forex`` skill for user-facing setup guidance.
 """
 
 from __future__ import annotations
 
 import os
 
-# OANDA (forex) — not yet wired into a tool; reserved for the BYO-keys path.
 OANDA_TOKEN: str | None = os.environ.get("RF_OANDA_TOKEN")
-OANDA_ACCOUNT_ID: str | None = os.environ.get("RF_OANDA_ACCOUNT_ID")
 OANDA_ENV: str = os.environ.get("RF_OANDA_ENV", "practice")  # or "live"
 
 
 def has_oanda() -> bool:
-    """True when OANDA credentials are present (forex analysis available)."""
-    return bool(OANDA_TOKEN and OANDA_ACCOUNT_ID)
+    """True when an OANDA token is configured (forex analysis available)."""
+    token = (OANDA_TOKEN or "").strip()
+    return bool(token) and not token.startswith("${")

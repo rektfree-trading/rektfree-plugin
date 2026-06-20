@@ -9,8 +9,8 @@ the backend's /market/ict payload shape: Draw on Liquidity (DOL), Power of 3
 from __future__ import annotations
 
 from data import binance
+from data import market
 from engines import ict_concepts as ict_engine
-from tools._common import crypto_only_error
 
 
 def _serialize(result: ict_engine.ICTResult) -> dict:
@@ -100,8 +100,9 @@ def register(mcp) -> None:
 
         Args:
             symbol: Binance crypto symbol with no separator, e.g. ``BTCUSDT``,
-                ``ETHUSDT``, ``SOLUSDT``. Forex pairs (with ``_``) are not
-                supported in this slice.
+                ``ETHUSDT``, ``SOLUSDT``. Forex/metals (e.g. ``EUR_USD``,
+                ``XAU_USD``) ARE supported when ``RF_OANDA_TOKEN`` is set;
+                crypto needs no key.
             timeframe: Intraday timeframe for session grouping — 1h (default) or
                 15m give the cleanest session boundaries. Lower timeframes give
                 finer phase ranges; higher ones span more days.
@@ -112,13 +113,10 @@ def register(mcp) -> None:
             plus ``current_dol`` and ``current_session_bias`` for the latest day.
             On failure, a dict with an ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
         # 1000 intraday candles — enough trading days for session grouping and
         # the daily-bias DOL lookback. Mirrors the backend's /market/ict fetch.
         try:
-            candles = await binance.fetch_candles(symbol, timeframe, 1000)
+            candles = await market.fetch_candles(symbol, timeframe, 1000)
         except binance.BinanceError as exc:
             return {"error": str(exc)}
 
