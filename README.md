@@ -40,7 +40,7 @@ stale.
 > volatility, correlation, **position sizing / risk**, **raw candles**, plus an
 > **in-memory backtester** (frequency + R-multiple equity curve) and
 > **edge-discovery** — and `/analyze`, `/brief`, `/strategy` synthesis layers
-> with interpretation skills (multi-timeframe, killzone). **33 commands, 30
+> with interpretation skills (multi-timeframe, killzone). **34 commands, 33
 > skills.** **Crypto is keyless** (Binance spot +
 > futures); **forex, metals & stock indices** (EUR_USD, XAU_USD, NAS100_USD…)
 > work with your own OANDA token.
@@ -122,8 +122,8 @@ killzones, confluence, a watchlist, and invalidation, in one flow:
 | `/analyze` command + `synthesis` skill | The flagship read: orchestrates **all** the tools (HTF + entry-TF SMC, levels, profile, order flow, derivatives, confluence) into one weighted brief — bias, key levels, flow, positioning, session context, a trade idea with target & invalidation, and risks. Auto-activates on "what's the setup / full read / bias / trade idea" questions. |
 | `/brief` command + `brief` skill | A forward-looking **pre-session brief**: anchors on the session clock (what session we're in, what's next, the killzone), then wraps `/analyze` + `compute_session_stats` into a session game-plan with statistical tendencies and an if-then watch-list. |
 | `/strategy` command + `strategy` skill | **Trade / strategy review**: paste your trades (or describe your approach) and Claude computes your stats, cross-references representative trades against the analysis tools, runs a gap analysis vs the RektFree framework, and returns a critique + improvement plan. |
-| Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/peakpoints` `/sessioncard` `/orb` `/ethprofile` `/mtf` `/killzone` `/backtest` `/backtestrr` `/edges` `/possize` `/candles` — run a tool (or stack tools) and ask Claude for a trader-facing read. |
-| Auto-activating skills | One per tool/domain plus interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, `peakpoints`, `sessioncard`, `orb`, `ethprofile`, `backtest`, `edges`, `strategy`, **`mtf`** (multi-timeframe), **`killzone`** (session timing), **`forex`** (forex/metals setup) — turning the raw numbers into decision-oriented analysis. |
+| Single-tool & interpretation commands | `/smc` `/levels` `/profile` `/orderflow` `/scan` `/market` `/sessions` `/smcstats` `/derivatives` `/volatility` `/correlations` `/dailybias` `/ict` `/pdhpdl` `/ib` `/daytype` `/sessionext` `/forecast` `/priceaction` `/peakpoints` `/sessioncard` `/orb` `/ethprofile` `/mtf` `/killzone` `/backtest` `/backtestrr` `/edges` `/possize` `/candles` — run a tool (or stack tools) and ask Claude for a trader-facing read. New here? `/help` maps the whole toolkit. |
+| Auto-activating skills | One per tool/domain plus interpretation skills — `smc`, `levels`, `tpo`, `orderflow`, `scan`, `sessions`, `smcstats`, `derivatives`, `volatility`, `correlations`, `dailybias`, `ict`, `pdhpdl`, `ib`, `daytype`, `sessionext`, `forecast`, `priceaction`, `peakpoints`, `sessioncard`, `orb`, `ethprofile`, `backtest`, `edges`, `strategy`, `possize`, `candles`, **`mtf`** (multi-timeframe), **`killzone`** (session timing), **`forex`** (forex/metals setup), **`help`** (what can this do?) — turning the raw numbers into decision-oriented analysis. |
 
 ## Requirements
 
@@ -179,8 +179,8 @@ rektfree-plugin/
     plugin.json          # plugin manifest
     marketplace.json     # makes this repo installable as a marketplace
   .mcp.json              # registers the stdio MCP server
-  commands/              # 33 slash commands (analyze, brief, strategy + one per tool)
-  skills/                # 30 skills (synthesis + one per tool/domain),
+  commands/              # 34 slash commands (analyze, brief, strategy, help + one per tool)
+  skills/                # 33 skills (synthesis + one per tool/domain),
                          #   each a SKILL.md + reference.md
   mcp-server/
     server.py            # FastMCP server — auto-discovers tools/*.register(mcp)
@@ -203,6 +203,8 @@ rektfree-plugin/
       agg_trades.py      # keyless aggregated-trades fetcher (order flow)
       derivatives.py     # keyless Binance Futures fetchers (funding/OI/long-short/taker)
     tests/               # pytest: offline unit + live contract (RF_LIVE_TESTS=1)
+  scripts/
+    version_sync.py      # keep the 3 manifest version fields in lockstep (--check / --set)
 ```
 
 `synthesis` has no MCP tool of its own — it's a pure orchestration skill that

@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/strategy` now ingests a broker CSV/XLSX trade export (auto broker-detection + column mapping) and emits per-rule compliance and signal-alignment tables; trade data stays local to the conversation.
 - `SETUP.md` recipe for scheduling a pre-session `/brief` to recover the old auto-brief cadence without a server.
 - Slash commands for the previously command-less tools — `/possize`, `/candles`, `/backtestrr` — so every tool is reachable by command, plus `/peakpoints`, `/sessioncard`, `/orb`, `/ethprofile` for the new stats.
+- `/help` command and `help` skill: a categorized map of the whole toolkit for first-run users. `possize` and `candles` skills so position-sizing and raw-candle requests auto-activate from plain English.
+- `scripts/version_sync.py` (`--check` / `--set`) plus a pytest guardrail to keep the three manifest version fields in lockstep.
 
 ### Changed
 - `/brief` now folds in volatility/ATR sizing, cross-asset correlations, and (crypto) order flow — tools the brief already had but wasn't calling.
