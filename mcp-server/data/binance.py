@@ -12,6 +12,8 @@ account id even for candles. That is the future "bring-your-own-keys" path.
 
 from __future__ import annotations
 
+import asyncio
+
 import httpx
 
 BINANCE_REST_URL = "https://api.binance.com/api/v3"
@@ -42,6 +44,16 @@ MAX_LIMIT = 1000
 
 _HTTP_TIMEOUT = httpx.Timeout(15.0, connect=5.0)
 
+# Transient-failure retry policy. Traders hit these endpoints repeatedly
+# (scanners, order-flow rebuilds), so a single 429 or network blip shouldn't
+# surface as a hard error — we retry with exponential backoff, honoring a
+# Retry-After header when Binance sends one.
+_MAX_RETRIES = 3            # extra attempts after the first (4 tries total)
+_BACKOFF_BASE = 0.5         # seconds, doubled each attempt
+_MAX_RETRY_SLEEP = 8.0      # cap any single backoff/Retry-After wait
+# 429 = rate limited, 418 = IP auto-banned for ignoring 429s, 5xx = upstream.
+_RETRY_STATUS = frozenset({418, 429, 500, 502, 503, 504})
+
 
 class BinanceError(RuntimeError):
     """Raised when Binance returns an error or unexpected payload."""
@@ -56,6 +68,87 @@ def normalize_timeframe(timeframe: str) -> str:
             f"Unsupported timeframe '{timeframe}'. Valid values: {valid}"
         )
     return TIMEFRAME_MAP[key]
+
+
+def _parse_retry_after(value: str | None) -> float | None:
+    """Parse a ``Retry-After`` header (delta-seconds form) into float seconds."""
+    if not value:
+        return None
+    try:
+        return max(0.0, float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+async def request_json(
+    client: httpx.AsyncClient,
+    path: str,
+    params: dict,
+    *,
+    context: str = "request",
+):
+    """GET a Binance REST endpoint with bounded retry/backoff; return parsed JSON.
+
+    Retries transient failures — HTTP 429/418 (rate limit / IP throttle), 5xx,
+    and network errors — with exponential backoff, honoring a ``Retry-After``
+    header when present. A 400 (bad symbol/params) is terminal and raises
+    immediately, as does an exhausted retry budget.
+
+    Args:
+        client: An open ``httpx.AsyncClient`` (callers reuse one across pages).
+        path: Endpoint path under the REST base, e.g. ``"klines"``.
+        params: Query parameters (should include ``symbol`` for error context).
+        context: Short label used in error messages (e.g. ``"request"``,
+            ``"aggTrades"``).
+
+    Returns:
+        The decoded JSON (``list`` or ``dict``).
+
+    Raises:
+        BinanceError: on a terminal 400, a non-retriable status, a malformed
+            body, or once the retry budget is exhausted.
+    """
+    url = f"{BINANCE_REST_URL}/{path.lstrip('/')}"
+    sym = params.get("symbol", "?")
+    last_err = "unknown error"
+
+    for attempt in range(_MAX_RETRIES + 1):
+        retry_after: float | None = None
+        try:
+            resp = await client.get(url, params=params)
+        except httpx.HTTPError as exc:  # network / timeout — transient
+            last_err = f"network error: {exc}"
+        else:
+            if resp.status_code == 200:
+                raw = resp.json()
+                if not isinstance(raw, (list, dict)):
+                    raise BinanceError(f"Unexpected Binance response: {raw!r}")
+                return raw
+            if resp.status_code == 400:
+                # Binance returns 400 + JSON {"code","msg"} for bad symbols.
+                try:
+                    msg = resp.json().get("msg", resp.text)
+                except Exception:
+                    msg = resp.text
+                raise BinanceError(
+                    f"Binance rejected {context} for symbol '{sym}': {msg}"
+                )
+            if resp.status_code not in _RETRY_STATUS:
+                raise BinanceError(
+                    f"Binance returned HTTP {resp.status_code}: {resp.text[:200]}"
+                )
+            last_err = f"HTTP {resp.status_code}"
+            retry_after = _parse_retry_after(resp.headers.get("Retry-After"))
+
+        if attempt >= _MAX_RETRIES:
+            break
+        sleep_s = retry_after if retry_after is not None else _BACKOFF_BASE * (2 ** attempt)
+        await asyncio.sleep(min(sleep_s, _MAX_RETRY_SLEEP))
+
+    raise BinanceError(
+        f"Binance unavailable for {context} '{sym}' after "
+        f"{_MAX_RETRIES + 1} attempts ({last_err})."
+    )
 
 
 async def fetch_candles(
@@ -81,30 +174,11 @@ async def fetch_candles(
     limit = max(1, min(int(limit), MAX_LIMIT))
     sym = symbol.strip().upper()
 
-    url = f"{BINANCE_REST_URL}/klines"
     params = {"symbol": sym, "interval": interval, "limit": limit}
 
-    try:
-        async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
-            resp = await client.get(url, params=params)
-    except httpx.HTTPError as exc:  # network / timeout
-        raise BinanceError(f"Network error reaching Binance: {exc}") from exc
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+        raw = await request_json(client, "klines", params, context="request")
 
-    if resp.status_code == 400:
-        # Binance returns 400 with a JSON {"code", "msg"} for bad symbols.
-        try:
-            msg = resp.json().get("msg", resp.text)
-        except Exception:
-            msg = resp.text
-        raise BinanceError(
-            f"Binance rejected request for symbol '{sym}': {msg}"
-        )
-    if resp.status_code != 200:
-        raise BinanceError(
-            f"Binance returned HTTP {resp.status_code}: {resp.text[:200]}"
-        )
-
-    raw = resp.json()
     if not isinstance(raw, list):
         raise BinanceError(f"Unexpected Binance response: {raw!r}")
 

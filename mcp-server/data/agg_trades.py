@@ -20,8 +20,9 @@ from __future__ import annotations
 
 import httpx
 
-# Reuse the same error type as the candle fetcher so callers can catch one class.
-from data.binance import BINANCE_REST_URL, BinanceError
+# Reuse the candle fetcher's error type + retrying request helper so callers can
+# catch one class and both fetchers share the same rate-limit/backoff behavior.
+from data.binance import BinanceError, request_json
 
 # Binance caps a single aggTrades request at 1000 records.
 MAX_PER_PAGE = 1000
@@ -63,7 +64,6 @@ async def fetch_agg_trades(
         BinanceError: on HTTP failure or unexpected response shape.
     """
     sym = symbol.strip().upper()
-    url = f"{BINANCE_REST_URL}/aggTrades"
 
     trades: list[dict] = []
     cursor = int(start_ms)
@@ -81,29 +81,9 @@ async def fetch_agg_trades(
                     "endTime": end_ms,
                     "limit": MAX_PER_PAGE,
                 }
-                try:
-                    resp = await client.get(url, params=params)
-                except httpx.HTTPError as exc:  # network / timeout
-                    raise BinanceError(
-                        f"Network error reaching Binance: {exc}"
-                    ) from exc
-
-                if resp.status_code == 400:
-                    # Binance returns 400 + JSON {"code","msg"} for bad symbols.
-                    try:
-                        msg = resp.json().get("msg", resp.text)
-                    except Exception:
-                        msg = resp.text
-                    raise BinanceError(
-                        f"Binance rejected aggTrades for symbol '{sym}': {msg}"
-                    )
-                if resp.status_code != 200:
-                    raise BinanceError(
-                        f"Binance returned HTTP {resp.status_code}: "
-                        f"{resp.text[:200]}"
-                    )
-
-                raw = resp.json()
+                # Shared helper: retries 429/418/5xx + network blips with
+                # backoff, raises BinanceError on a bad symbol (400).
+                raw = await request_json(client, "aggTrades", params, context="aggTrades")
                 if not isinstance(raw, list):
                     raise BinanceError(f"Unexpected Binance response: {raw!r}")
 
