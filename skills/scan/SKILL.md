@@ -4,9 +4,12 @@ description: >-
   Confluence setup scoring for crypto. Use whenever the user asks to "scan" a
   market, for a "confluence" read, a "setup score", "is there a setup", "grade
   this trade", "go/no-go", whether a setup qualifies, or how strong a setup is
-  for a crypto symbol (BTC, ETH, SOL, etc.). Pairs with the `scan_confluence`
-  MCP tool, which fetches Binance 1H+4H candles, runs SMC, and returns the
-  numeric confluence score, factor breakdown, and structural target/invalidation.
+  for a crypto symbol (BTC, ETH, SOL, etc.), OR to scan the **whole market /
+  watchlist** for setups ("any setups right now?", "what's setting up?"). Pairs
+  with the `scan_confluence` MCP tool (one symbol) and the `scan_market` tool
+  (a ranked watchlist) — both fetch Binance 1H+4H candles, run SMC, and return
+  the numeric confluence score, factor breakdown, and structural target/
+  invalidation.
 ---
 
 # Confluence Setup Scan
@@ -16,6 +19,14 @@ computation — it fetches Binance 1H + 4H candles, runs the SMC engine on each,
 and stacks the signals into a single 0–N confluence score with the same point
 weights as the hosted RektFree scanner. Your job is to **interpret** the score
 into a clear go/no-go read. Never just echo the JSON.
+
+For a **market-wide scan**, call `scan_market` instead (optionally with a
+`symbols` list, or `only_actionable: true`). It returns the same per-symbol
+grades **ranked** best-first, plus `actionable` (how many meet `min_score`) and
+`errors`. Lead with the names that meet threshold — each with direction, score,
+key factors, target & invalidation — then note near-misses; "no A+ setups right
+now" is a valid answer. Everything below about reading a single score applies to
+each ranked entry.
 
 ## What this is (and is not)
 

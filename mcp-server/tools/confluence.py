@@ -24,6 +24,91 @@ from engines import smart_money
 from tools._common import crypto_only_error
 
 
+async def grade_symbol(symbol: str) -> dict:
+    """Score one crypto symbol's confluence and return the grade payload.
+
+    Shared by the ``scan_confluence`` tool (single symbol) and ``scan_market``
+    (watchlist), so both use identical fetch + SMC + scoring logic. Returns the
+    grade dict on success, or ``{"error": ...}`` on a forex symbol, fetch
+    failure, or insufficient data.
+    """
+    if err := crypto_only_error(symbol):
+        return err
+
+    # 1H drives the entry/structure; 4H gives the higher-timeframe bias.
+    # 300 candles each: ~12.5 days on 1H and ~50 days on 4H — enough for
+    # stable swings, ATR, and a recent TPO session. Mirrors the backend's
+    # 1H+4H scan inputs (it fetches 200×1H / 100×4H; we fetch more for
+    # steadier structure since we have no DB-cached history to fall back on).
+    try:
+        candles_1h = await binance.fetch_candles(symbol, "1h", 300)
+        candles_4h = await binance.fetch_candles(symbol, "4h", 300)
+    except binance.BinanceError as exc:
+        return {"error": str(exc)}
+
+    if not candles_1h or len(candles_1h) < 50:
+        return {
+            "error": (
+                f"Not enough 1H candle data for {symbol} "
+                f"(got {len(candles_1h)}, need ≥50)."
+            )
+        }
+
+    # ── 1H SMC (swing_length=20, matches scan_symbol + tools/smc.py 1h) ──
+    smc_1h = smart_money.analyze(
+        [c["open"] for c in candles_1h],
+        [c["high"] for c in candles_1h],
+        [c["low"] for c in candles_1h],
+        [c["close"] for c in candles_1h],
+        [c["time"] for c in candles_1h],
+        swing_length=20,
+        internal_length=5,
+        eql_threshold=0.15,
+        eql_length=5,
+    )
+
+    # ── 4H SMC (swing_length=10, matches scan_symbol's HTF pass) ──
+    smc_4h = None
+    if candles_4h and len(candles_4h) >= 30:
+        smc_4h = smart_money.analyze(
+            [c["open"] for c in candles_4h],
+            [c["high"] for c in candles_4h],
+            [c["low"] for c in candles_4h],
+            [c["close"] for c in candles_4h],
+            [c["time"] for c in candles_4h],
+            swing_length=10,
+            internal_length=5,
+            eql_threshold=0.15,
+            eql_length=3,
+        )
+
+    current_price = candles_1h[-1]["close"]
+    now = datetime.now(timezone.utc)
+
+    grade = confluence_engine.score_setup(
+        smc_1h=smc_1h,
+        smc_4h=smc_4h,
+        candles_1h=candles_1h,
+        candles_4h=candles_4h,
+        current_price=current_price,
+        now_utc=now,
+    )
+
+    return {
+        "symbol": symbol.upper(),
+        "last_price": current_price,
+        "score": grade["score"],
+        "min_score": grade["min_score"],
+        "meets_threshold": grade["meets_threshold"],
+        "direction": grade["direction"],
+        "is_counter_trend": grade["is_counter_trend"],
+        "factors": grade["factors"],
+        "target": grade["target"],
+        "invalidation": grade["invalidation"],
+        "scored_at": now.isoformat(),
+    }
+
+
 def register(mcp) -> None:
     @mcp.tool()
     async def scan_confluence(symbol: str = "BTCUSDT") -> dict:
@@ -66,78 +151,4 @@ def register(mcp) -> None:
             ``scored_at`` (UTC ISO timestamp). On failure, a dict with an
             ``error`` key.
         """
-        if err := crypto_only_error(symbol):
-            return err
-
-        # 1H drives the entry/structure; 4H gives the higher-timeframe bias.
-        # 300 candles each: ~12.5 days on 1H and ~50 days on 4H — enough for
-        # stable swings, ATR, and a recent TPO session. Mirrors the backend's
-        # 1H+4H scan inputs (it fetches 200×1H / 100×4H; we fetch more for
-        # steadier structure since we have no DB-cached history to fall back on).
-        try:
-            candles_1h = await binance.fetch_candles(symbol, "1h", 300)
-            candles_4h = await binance.fetch_candles(symbol, "4h", 300)
-        except binance.BinanceError as exc:
-            return {"error": str(exc)}
-
-        if not candles_1h or len(candles_1h) < 50:
-            return {
-                "error": (
-                    f"Not enough 1H candle data for {symbol} "
-                    f"(got {len(candles_1h)}, need ≥50)."
-                )
-            }
-
-        # ── 1H SMC (swing_length=20, matches scan_symbol + tools/smc.py 1h) ──
-        smc_1h = smart_money.analyze(
-            [c["open"] for c in candles_1h],
-            [c["high"] for c in candles_1h],
-            [c["low"] for c in candles_1h],
-            [c["close"] for c in candles_1h],
-            [c["time"] for c in candles_1h],
-            swing_length=20,
-            internal_length=5,
-            eql_threshold=0.15,
-            eql_length=5,
-        )
-
-        # ── 4H SMC (swing_length=10, matches scan_symbol's HTF pass) ──
-        smc_4h = None
-        if candles_4h and len(candles_4h) >= 30:
-            smc_4h = smart_money.analyze(
-                [c["open"] for c in candles_4h],
-                [c["high"] for c in candles_4h],
-                [c["low"] for c in candles_4h],
-                [c["close"] for c in candles_4h],
-                [c["time"] for c in candles_4h],
-                swing_length=10,
-                internal_length=5,
-                eql_threshold=0.15,
-                eql_length=3,
-            )
-
-        current_price = candles_1h[-1]["close"]
-        now = datetime.now(timezone.utc)
-
-        grade = confluence_engine.score_setup(
-            smc_1h=smc_1h,
-            smc_4h=smc_4h,
-            candles_1h=candles_1h,
-            candles_4h=candles_4h,
-            current_price=current_price,
-            now_utc=now,
-        )
-
-        return {
-            "symbol": symbol.upper(),
-            "last_price": current_price,
-            "score": grade["score"],
-            "min_score": grade["min_score"],
-            "meets_threshold": grade["meets_threshold"],
-            "direction": grade["direction"],
-            "is_counter_trend": grade["is_counter_trend"],
-            "factors": grade["factors"],
-            "target": grade["target"],
-            "invalidation": grade["invalidation"],
-            "scored_at": now.isoformat(),
-        }
+        return await grade_symbol(symbol)
