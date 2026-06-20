@@ -24,6 +24,7 @@ tpo, orderflow, scan) are the instruments.
    - `get_levels` — the structural framework (D/W/M + sessions).
    - `get_market_profile` — POC / VAH / VAL on the entry timeframe.
    - `get_orderflow` (5m/15m) — delta / CVD / absorption (crypto only).
+   - `get_derivatives` — funding / OI / long-short / taker positioning (crypto).
    - `scan_confluence` — the deterministic structural grade.
    Run them together where possible. If one errors (rate limit, thin data),
    continue with the rest and note the gap — never abort the whole brief.
@@ -36,6 +37,9 @@ tpo, orderflow, scan) are the instruments.
    - Does POC / VAH / VAL line up with an unmitigated OB or FVG?
    - Does order-flow delta/CVD **confirm** structure, or **diverge** (absorption
      → possible reversal)?
+   - Does **positioning** agree? Funding/OI/long-short either back the thesis
+     (e.g. bullish structure + crowded shorts = squeeze fuel) or warn against it
+     (bullish structure + euphoric crowded longs = squeeze risk).
    - Where is liquidity resting (EQH/EQL, prior session & prior-day H/L) — those
      are targets, not safe stops.
    - Is price in premium or discount relative to the swing range, and does that
@@ -67,6 +71,9 @@ KEY LEVELS (nearest to price)
 ORDER FLOW
 - Net delta: [buyers/sellers dominant] | CVD: [rising/falling/diverging]
 - Notable: [absorption / exhaustion / large trades]
+
+POSITIONING (derivatives)
+- Funding [..%] | OI [trend] | Long/short [global vs top] | Squeeze risk [L/M/H]
 
 SESSION CONTEXT
 - Current session + phase; Asia range swept or intact; killzone active?

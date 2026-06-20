@@ -1,20 +1,21 @@
 # RektFree Plugin
 
 A self-contained [Claude Code](https://code.claude.com) plugin for **Smart Money
-Concepts (SMC)**, **key levels**, **Market Profile**, **order flow**, and
-**confluence scoring** market analysis on crypto — with **Claude itself as the
-analyst**.
+Concepts (SMC)**, **key levels**, **Market Profile**, **order flow**,
+**confluence scoring**, **session & SMC hit-rate stats**, and **futures
+positioning** market analysis on crypto — with **Claude itself as the analyst**.
 
 The plugin ships RektFree's pure-Python analysis engines behind a small MCP
 server. Claude calls a tool to fetch live Binance data and run the analysis, then
 interprets the structure for you. There are no AI-provider API keys to manage —
 the model you're already talking to *is* the brain.
 
-> **Status: v0.2 (in progress).** Seven tools (`analyze_smc`, `get_levels`,
+> **Status: v0.2 (in progress).** Eight tools (`analyze_smc`, `get_levels`,
 > `get_market_profile`, `get_orderflow`, `scan_confluence`,
-> `compute_session_stats`, `compute_smc_stats`) plus a `/analyze` synthesis layer
-> that weaves them together; eight commands and eight skills, crypto only
-> (Binance, keyless). Forex (OANDA, BYO-token) and pre-session briefs are next.
+> `compute_session_stats`, `compute_smc_stats`, `get_derivatives`) plus a
+> `/analyze` synthesis layer that weaves them together; nine commands and nine
+> skills, crypto only (Binance spot + futures, keyless). Forex (OANDA,
+> BYO-token) and pre-session briefs are next.
 
 ## What you get
 
@@ -27,9 +28,10 @@ the model you're already talking to *is* the brain.
 | `scan_confluence` MCP tool | Grades a setup with the 0–N Smart Money confluence score across 1H + 4H (requires an aligned order block near price). Deterministic — no AI, no macro/DB inputs. Returns the score, factor breakdown, direction, target, and invalidation. |
 | `compute_session_stats` MCP tool | Statistical edge: scans deep 1H history and reports per-session avg ranges, Asia→London / London→NY **sweep rates**, NY continuation rate, Power-of-3 occurrence, and a day-of-week breakdown (each with sample size). |
 | `compute_smc_stats` MCP tool | SMC **hit rates** from a sliding window over 1H history: OB retest & hold rate, FVG fill rate & depth, BOS continuation rate, CHoCH reversal rate, EQH/EQL sweep, and liquidity-sweep success — each with its sample size `n`. |
+| `get_derivatives` MCP tool | **Futures positioning** from keyless Binance Futures: funding rate (current %, annualized, next-funding countdown), open interest (value + change/trend), long/short account ratio (**global crowd + top-trader**), and taker buy/sell flow — with trend series for squeeze-risk reads. |
 | `/analyze` command + `synthesis` skill | The flagship read: orchestrates **all** the tools (HTF + entry-TF SMC, levels, profile, order flow, confluence) into one weighted brief — bias, key levels, flow, session context, a trade idea with target & invalidation, and risks. Auto-activates on "what's the setup / full read / bias / trade idea" questions. |
-| `/smc` `/levels` `/profile` `/orderflow` `/scan` `/sessions` `/smcstats` commands | One-shot wrappers, e.g. `/scan BTCUSDT` — run a single tool and ask Claude for a trader-facing read. |
-| `smc` · `levels` · `tpo` · `orderflow` · `scan` · `sessions` · `smcstats` skills | Auto-activate on the matching questions (structure/OBs/FVGs; support/resistance/PDH/PDL/sessions; POC/value area; delta/CVD/absorption; setup grading; session sweep rates; SMC hit rates) and turn the raw numbers into decision-oriented analysis. |
+| `/smc` `/levels` `/profile` `/orderflow` `/scan` `/sessions` `/smcstats` `/derivatives` commands | One-shot wrappers, e.g. `/scan BTCUSDT` — run a single tool and ask Claude for a trader-facing read. |
+| `smc` · `levels` · `tpo` · `orderflow` · `scan` · `sessions` · `smcstats` · `derivatives` skills | Auto-activate on the matching questions (structure/OBs/FVGs; support/resistance/PDH/PDL/sessions; POC/value area; delta/CVD/absorption; setup grading; session sweep rates; SMC hit rates; funding/OI/squeeze) and turn the raw numbers into decision-oriented analysis. |
 
 ## Requirements
 
@@ -91,9 +93,10 @@ rektfree-plugin/
     marketplace.json     # makes this repo installable as a marketplace
   .mcp.json              # registers the stdio MCP server
   commands/                # slash commands
-    analyze.md  smc.md  levels.md  profile.md  orderflow.md  scan.md  sessions.md  smcstats.md
+    analyze.md  smc.md  levels.md  profile.md  orderflow.md  scan.md
+    sessions.md  smcstats.md  derivatives.md
   skills/                  # one SKILL.md + reference.md each
-    synthesis/  smc/  levels/  tpo/  orderflow/  scan/  sessions/  smcstats/
+    synthesis/  smc/  levels/  tpo/  orderflow/  scan/  sessions/  smcstats/  derivatives/
   mcp-server/
     server.py            # FastMCP server — auto-discovers tools/*.register(mcp)
     requirements.txt     # mcp, httpx
@@ -101,13 +104,14 @@ rektfree-plugin/
     tools/
       _common.py         # shared crypto-only guard + bias helper
       smc.py  levels.py  market_profile.py  orderflow.py  confluence.py
-      session_stats.py  smc_stats.py
+      session_stats.py  smc_stats.py  derivatives.py
     engines/             # vendored pure analyzers (unchanged from backend)
       smart_money.py  levels.py  market_profile.py  orderflow.py  confluence.py
       session_stats.py  smc_stats.py
     data/
       binance.py         # keyless Binance candle fetcher (+ shared retry/backoff, paged history)
       agg_trades.py      # keyless Binance aggregated-trades fetcher (order flow)
+      derivatives.py     # keyless Binance Futures fetchers (funding/OI/long-short/taker)
 ```
 
 `synthesis` has no MCP tool of its own — it's a pure orchestration skill that

@@ -99,6 +99,7 @@ async def request_json(
     params: dict,
     *,
     context: str = "request",
+    base: str = BINANCE_REST_URL,
 ):
     """GET a Binance REST endpoint with bounded retry/backoff; return parsed JSON.
 
@@ -109,10 +110,13 @@ async def request_json(
 
     Args:
         client: An open ``httpx.AsyncClient`` (callers reuse one across pages).
-        path: Endpoint path under the REST base, e.g. ``"klines"``.
+        path: Endpoint path under ``base``, e.g. ``"klines"`` or
+            ``"fapi/v1/premiumIndex"``.
         params: Query parameters (should include ``symbol`` for error context).
         context: Short label used in error messages (e.g. ``"request"``,
-            ``"aggTrades"``).
+            ``"aggTrades"``, ``"derivatives"``).
+        base: REST base URL. Defaults to the spot API; the futures (derivatives)
+            fetchers pass the ``fapi.binance.com`` host.
 
     Returns:
         The decoded JSON (``list`` or ``dict``).
@@ -121,7 +125,7 @@ async def request_json(
         BinanceError: on a terminal 400, a non-retriable status, a malformed
             body, or once the retry budget is exhausted.
     """
-    url = f"{BINANCE_REST_URL}/{path.lstrip('/')}"
+    url = f"{base.rstrip('/')}/{path.lstrip('/')}"
     sym = params.get("symbol", "?")
     last_err = "unknown error"
 

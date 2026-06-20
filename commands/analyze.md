@@ -24,6 +24,8 @@ Steps:
    - `get_market_profile` on the entry timeframe for POC / VAH / VAL.
    - `get_orderflow` (use `5m` or `15m`) for delta / CVD / absorption — crypto
      only; skip gracefully if it errors.
+   - `get_derivatives` for funding / OI / long-short / taker positioning — adds
+     the leverage/squeeze dimension; skip gracefully if it errors.
    - `scan_confluence` for the structural 0–N grade.
    If any single tool errors (rate limit, etc.), continue with the rest and note
    the gap — don't abort the whole brief.
