@@ -6,7 +6,8 @@ description: >-
   "plan for the session" / "plan for the day", or "what's coming up". Unlike a
   snapshot analysis, this frames the session AHEAD: it anchors to the trading-day
   clock (get_session_clock), pulls the read (analyze_smc, get_levels,
-  get_market_profile, get_derivatives) plus this symbol's session tendencies
+  get_market_profile, get_derivatives, get_volatility, get_correlations,
+  get_orderflow) plus this symbol's session tendencies
   (compute_session_stats), and produces a bias, watch-list, and if-then plan for
   the upcoming session. Also powers the `/brief` command.
 ---
@@ -35,6 +36,13 @@ skill's cross-referencing, and turns it forward into a game plan.
    - `get_derivatives` — funding / OI / long-short / taker positioning (crypto).
    - `compute_session_stats` — **the spine of a pre-session brief**: this
      symbol's real sweep rates, NY continuation, Power-of-3, day-of-week edge.
+   - `get_volatility` — ATR / ATR% / ADR, % of ADR already used, realized vol,
+     squeeze state. This sizes the plan: ~1× ATR stop distance, 2–3× ATR target
+     distance, and how much of the daily range is *already spent* (exhaustion).
+   - `get_correlations` — per-symbol r vs a base (e.g. BTC for alts). Flag any
+     |r| > ~0.5 alignment or divergence that confirms or warns the bias.
+   - `get_orderflow` — **crypto only**: delta / CVD / footprint at the levels.
+     Skip it for forex/metals/indices (it returns a crypto-only message there).
    - `scan_confluence` — the deterministic structural grade.
    If one errors (rate limit, thin data), continue with the rest and note the
    gap — never abort the whole brief.
@@ -59,7 +67,13 @@ skill's cross-referencing, and turns it forward into a game plan.
    unmitigated OB/FVG? Where is resting liquidity (EQH/EQL, prior session/day
    H-L) the next session will hunt? Is price premium/discount, and does that
    agree with the bias? Does positioning back the thesis or warn (crowded longs
-   into a bullish setup = squeeze risk)?
+   into a bullish setup = squeeze risk)? Use `get_volatility` to convert the
+   plan into distances (stop ≈ 1× ATR, targets 2–3× ATR) and to gauge
+   exhaustion (% of ADR already used — a session that has spent most of its ADR
+   has less room to run). Use `get_correlations` to confirm or warn the bias
+   (an aligned base like BTC leading the same way strengthens it; a divergence
+   is a caution). For crypto, use `get_orderflow` to see whether delta/CVD
+   backs the structural read at the levels.
 
 6. **Plan forward.** Build a concrete **if-then** watch-list keyed to the
    upcoming session and its killzone, every branch with an invalidation. Respect
@@ -85,12 +99,25 @@ KEY LEVELS FOR THE SESSION (nearest first)
 - POC [..] | VAH [..] | VAL [..]
 - Liquidity the next session hunts: [prior session/day H-L, EQH/EQL]
 
+VOLATILITY & SIZING
+- ATR [..] ([..]% of price) | ADR [..] — [X]% of ADR already used ([room left/exhausted])
+- Stop ≈ 1× ATR ([..]) | realistic targets 2–3× ATR ([..] / [..])
+- Squeeze: [on/off] — [expansion likely / range-bound risk]
+
 STATISTICAL EDGE (this symbol, recent sample)
 - [Upcoming-session tendency with the real rate + sample size]
 - [Day-of-week note if notable] | Power-of-3 occurrence/success if relevant
 
 POSITIONING (derivatives)
 - Funding [..%] | OI [trend] | Long/short [global vs top] | Squeeze risk [L/M/H]
+
+CROSS-ASSET
+- vs [base]: r = [..] — [aligned, confirms bias / diverging, caution]
+- [Other notable |r|>0.5 correlation or divergence, or "nothing notable"]
+
+ORDER FLOW (crypto only)
+- Delta/CVD [..] | footprint [absorption / initiative at level ..]
+- (Forex/metals/indices: "n/a — no tick data")
 
 SESSION PLAYBOOK ([upcoming session])
 - Primary scenario for the open + the stat that backs it

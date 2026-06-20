@@ -8,6 +8,85 @@ supply objective market context.
 
 ---
 
+## 0. Ingesting a broker export (CSV / XLSX) — detection & column mapping
+
+If the user **attached a file or gave a path** (`.csv`, `.xlsx`, `.xls`), read it
+yourself (you read attached files natively — there is **no parser MCP tool**, and
+you must not add one). Then auto-detect the layout and map columns. Pasted/typed
+trades still work without any of this — the file is an extra on-ramp.
+
+**Privacy:** the export is the user's private trade ledger. Keep it inside this
+conversation — never upload it, never put trade rows into a tool argument. The
+only thing that leaves to the MCP tools is `(symbol, time)` for a handful of
+representative trades.
+
+### a. Skip the junk first
+
+Real exports are messy. Before mapping, drop:
+- **Title / metadata rows** above the real header (account name, broker, "Closed
+  Transactions:", report date, currency, leverage).
+- **Balance / non-trade ledger lines** — rows whose type is `balance`, `deposit`,
+  `withdrawal`, `credit`, `transfer`, `commission`-only, `rollover`/`swap`-only,
+  or that have no symbol + no entry/exit price. These inflate counts and have no
+  side — exclude them and report how many you skipped.
+- **Summary / totals footer** ("Total:", "Closed P/L:", "Balance:").
+
+### b. Detect the broker / layout (fingerprints)
+
+| layout | tells |
+|--------|-------|
+| **MT4 / MT5 statement** | header block then a "Closed Transactions" / "Positions" table; cols like `Ticket, Open Time, Type, Size/Volume, Item/Symbol, Price, S/L, T/P, Close Time, Price, Commission, Swap, Profit`; `Type` is `buy`/`sell`; HTML or tab/`;`-delimited; balance rows interleaved |
+| **cTrader** | `Closing Time, Symbol, Direction, Volume, Entry price, Closing price, Net USD, Pips`; `Direction` = `Buy`/`Sell` |
+| **TradingView** (Strategy Tester / paper) | `Symbol, Side, Type, Qty, Price, Date/Time, Net P&L`; or list-of-trades export with `Trade #, Entry/Exit, Signal` |
+| **Binance** (spot/futures history) | `Date(UTC), Pair, Side, Price, Executed, Realized Profit, Fee`; `Side` = `BUY`/`SELL`; pair like `BTCUSDT` |
+| **Bybit** | `Contracts, Order Time, Side, Order Price, Exec Value, Closed P&L`; `Side` = `Buy`/`Sell` |
+| **OANDA** (history) | `Transaction ID, Time, Instrument, Units, Price, P/L, Balance`; instrument like `EUR/USD`; sign of `Units` gives side |
+| **generic CSV** | none of the above — fall back to header-synonym matching (below) |
+
+Don't over-trust the fingerprint — confirm with the actual headers, and if the
+file doesn't match any, go straight to synonym matching.
+
+### c. Header-name synonyms (map columns → record fields)
+
+Match case-insensitively, ignore surrounding spaces/units. Pick the best column
+per field; if two compete (e.g. an open price and a close price), use position
+and labels (Open/Entry vs Close/Exit) to disambiguate.
+
+| field | header synonyms |
+|-------|-----------------|
+| `open_time` | Open Time, Entry Time, Opening Time, Date(UTC), Order Time, Time, Opened, Date/Time |
+| `close_time` | Close Time, Exit Time, Closing Time, Closed |
+| `symbol` | Symbol, Item, Instrument, Pair, Contracts, Market, Ticker |
+| `side` | Type, Side, Direction, B/S, Action, Order Type |
+| `entry` | Open Price, Entry Price, Price (the open one), Avg Entry |
+| `exit` | Close Price, Exit Price, Closing Price, Price (the close one) |
+| `size` | Size, Volume, Qty, Quantity, Units, Lots, Executed, Amount, Contracts |
+| `pnl` | Profit, PnL, P/L, Net P/L, Net P&L, Realized Profit, Closed P&L, Net USD, Gain |
+| `stop` | S/L, SL, Stop, Stop Loss |
+
+**Side decoding:** `buy/long/b/1/+/units>0 → long`; `sell/short/s/-1/0/−/units<0
+→ short`. **P&L cleaning:** strip `$ € £`, thousands commas, parentheses-as-
+negative `(12.34) → −12.34`; combine `Profit + Swap + Commission` into net if the
+broker splits them. Then hand the cleaned rows to §1 normalization.
+
+### d. Deduce the session from the open time
+
+If `open_time` is present, derive the RektFree session yourself (in **UTC** —
+convert first if the export is in broker/local time, and say which tz you assumed):
+**Asia 00:00–08:00, London 08:00–13:00, NY 13:00–21:00, off-hours 21:00–24:00**
+(confirm boundaries with `get_session_clock`). Killzones per §1. This powers the
+by-session stats even when the broker didn't label a session.
+
+### e. Big files
+
+If the export is very large, keep all rows for the headline stats where feasible;
+for the **cross-reference** step only ever sample (best / worst / most-typical and
+a spread across symbols, sessions, dates). If you must sample for stats too,
+sample across the **whole** date range and all symbols/sessions — never just the
+first N rows — and state the sample size and method.
+
+---
+
 ## 1. Parsing & normalization (you are the parser)
 
 The user's input has no fixed schema. Map whatever they paste onto this record:
@@ -102,6 +181,62 @@ your impulsive off-framework ones win 29% and are dragging expectancy negative."
 **Forex caveat:** the live tools are crypto-only (forex `_` symbols error). For
 forex trades, do the stats + the framework gap review, and explicitly say live
 cross-referencing isn't available — don't call the tools and don't guess.
+
+---
+
+## 3a. The two scorecards (per-rule compliance + alignment delta)
+
+The old web product surfaced two tables on top of the stats. Reproduce both.
+
+### Per-rule compliance
+
+Collect the **rules** to score:
+1. Rules the trader **states** ("I only trade London/NY killzones", "always risk
+   1R", "only with the daily bias", "no trades after 21:00 UTC", "minimum 2R
+   target").
+2. If they state none, **infer** 2–4 from their obvious pattern / from the
+   RektFree framework (killzone-only, consistent-R, HTF-aligned, level/OB entry).
+
+For each rule, classify every trade as **compliant** or **violation**:
+- Rules judged purely from the parsed data (time-of-day, R consistency, target,
+  size) → classify **all** trades, free.
+- Rules needing market context (with-bias, at-a-level, in-a-killzone) → judge from
+  the step-3 cross-reference on a **representative sample** and label it a sample
+  (extrapolate, don't pretend you checked every row).
+
+Then per rule report: **violations (k/n)**, **violation rate**, **win-rate when
+compliant vs when violated**, and the **net/expectancy delta**. The money line is
+usually a rule where violated-WR ≪ compliant-WR — that's a leak with a fix.
+
+| rule | violations | viol-rate | WR compliant | WR violated | net delta |
+|------|-----------|-----------|--------------|-------------|-----------|
+| only in killzones | 7/30 | 23% | 61% (n=23) | 29% (n=7) | −0.6R |
+
+State n on both sides; if either side is under ~8 trades, flag it as anecdotal.
+
+### Alignment delta (crypto only)
+
+This is the "did trades that agreed with the platform read win more" table. From
+the cross-referenced trades, mark each **aligned** vs **misaligned** with the
+RektFree read, then compare win-rate + expectancy. Use the 0–5 alignment score
+from §3 (aligned = score ≥3, misaligned = ≤1) so it's reproducible. The four
+pillars and the tool that decides each:
+
+- **Bias** — side matches `get_daily_bias` (and `analyze_smc` HTF `trend_bias`).
+- **Levels** — entry at an unmitigated OB/FVG or a key level from `get_levels`.
+- **Killzone** — opened in a killzone per `get_session_clock`, not dead hours.
+- **Confluence** — `scan_confluence` shows structure+level+profile+flow stacking
+  for the side, not a lone signal.
+
+| group | n | win rate | expectancy |
+|-------|---|----------|------------|
+| aligned (score ≥3)    | 18 | 64% | +0.5R |
+| misaligned (score ≤1) | 12 | 29% | −0.4R |
+
+The classic finding: framework-aligned trades carry the account; impulsive
+off-framework ones drag expectancy negative. **Forex:** the live tools are
+crypto-only, so the alignment delta can't be computed — say so and skip this
+table (the compliance table still works for data-judged rules).
 
 ---
 

@@ -218,3 +218,87 @@ def _classify_breakout_with_sequencing(
     if first_h_ts <= first_l_ts:
         return "both", "h_then_l"
     return "both", "l_then_h"
+
+
+# ---------------------------------------------------------------------------
+# Session-timing helpers (vendored from session_extension_stats — Session
+# Potential view #3). APPENDED for the Session-Potential "card" tool; the
+# functions above are untouched.
+# ---------------------------------------------------------------------------
+
+def _hour_from_time_str(t: str | None) -> int | None:
+    """'HH:MM' → int hour, or None if unparseable."""
+    if not t:
+        return None
+    try:
+        return int(t.split(":")[0])
+    except (ValueError, IndexError):
+        return None
+
+
+def format_window(hours: list[int]) -> tuple[str, int]:
+    """Given a list of integer hours (0-23), return ('HH:MM-HH:MM', peak_hour).
+
+    Window is [p25_hour, p75_hour] formatted as a contiguous string, peak is the
+    median hour. Byte-for-byte port of the backend's ``_format_window``. Empty
+    input returns ('--:--', 0).
+    """
+    if not hours:
+        return "--:--", 0
+    sorted_h = sorted(hours)
+    floats = [float(h) for h in sorted_h]
+    p25 = _percentile(floats, 0.25)
+    p75 = _percentile(floats, 0.75)
+    p25_hh = max(0, min(23, int(round(p25))))
+    p75_hh = max(0, min(23, int(round(p75))))
+    if p75_hh < p25_hh:
+        p75_hh = p25_hh
+    peak = int(round(median(floats)))
+    peak = max(0, min(23, peak))
+    return f"{p25_hh:02d}:00-{p75_hh:02d}:59", peak
+
+
+def session_timing_for(
+    day_summaries: dict[str, dict],
+    session: str,
+) -> dict:
+    """Wall-clock windows for when *session*'s high/low forms, bucketed by the
+    day's overall direction (long vs short).
+
+    ``day_summaries`` maps day_key → {session_name: session_range data dict}.
+    Mirrors the backend's ``session_timing`` aggregator, scoped to one session.
+    Returns ``{long_expected: {...}, short_expected: {...}}``.
+    """
+    buckets: dict[str, dict[str, list[int]]] = {
+        "long": {"high": [], "low": []},
+        "short": {"high": [], "low": []},
+    }
+    for day_rows in day_summaries.values():
+        summary = _compute_day_summary(day_rows)
+        if summary is None:
+            continue
+        if session not in day_rows:
+            continue
+        direction = summary["direction"]
+        r = day_rows[session]
+        ht = _hour_from_time_str(r.get("high_time"))
+        lt = _hour_from_time_str(r.get("low_time"))
+        if ht is not None:
+            buckets[direction]["high"].append(ht)
+        if lt is not None:
+            buckets[direction]["low"].append(lt)
+
+    block: dict[str, dict] = {}
+    for d in ("long", "short"):
+        high_hours = buckets[d]["high"]
+        low_hours = buckets[d]["low"]
+        high_window, high_peak = format_window(high_hours)
+        low_window, low_peak = format_window(low_hours)
+        block[f"{d}_expected"] = {
+            "high_window": high_window,
+            "low_window": low_window,
+            "high_peak_hour": high_peak,
+            "low_peak_hour": low_peak,
+            "sample_size": max(len(high_hours), len(low_hours)),
+        }
+    return block

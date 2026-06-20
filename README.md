@@ -32,14 +32,16 @@ OANDA. **One OANDA token unlocks forex, metals *and* indices** — no extra setu
 Indices follow their exchange's hours (not FX's 24/5), so off-hours reads may be
 stale.
 
-> **Status: v0.4.** **25 tools** spanning structure, levels, value, flow,
+> **Status: v0.5.** **29 tools** spanning structure, levels, value, flow,
 > derivatives, a broad stats layer (session, SMC hit-rates, PDH/PDL, Initial
-> Balance, day-type, session-extension), daily bias, ICT concepts, session
-> forecasting, price-action patterns, volatility, correlation, **position
-> sizing / risk**, **raw candles**, plus an **in-memory backtester** (frequency
-> + R-multiple equity curve) and **edge-discovery** — and `/analyze`, `/brief`,
-> `/strategy` synthesis layers with interpretation skills (multi-timeframe,
-> killzone). **26 commands, 26 skills.** **Crypto is keyless** (Binance spot +
+> Balance, day-type, session-extension, **peak-points HOD/LOD**, **session
+> potential cards**, **opening-range breakout**, **ETH value-area touch**),
+> daily bias, ICT concepts, session forecasting, price-action patterns,
+> volatility, correlation, **position sizing / risk**, **raw candles**, plus an
+> **in-memory backtester** (frequency + R-multiple equity curve) and
+> **edge-discovery** — and `/analyze`, `/brief`, `/strategy` synthesis layers
+> with interpretation skills (multi-timeframe, killzone). **30 commands, 30
+> skills.** **Crypto is keyless** (Binance spot +
 > futures); **forex, metals & stock indices** (EUR_USD, XAU_USD, NAS100_USD…)
 > work with your own OANDA token.
 > Install is one step — the server self-bootstraps its deps (see `SETUP.md`).

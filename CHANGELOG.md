@@ -5,6 +5,19 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-06-20
+
+### Added
+- Peak-points stats (`compute_peak_points_stats`): which session prints the day's high vs low, as marginals and a joint HOD×LOD probability matrix.
+- Session-potential cards (`get_session_card`): per-session direction split, HOD/LOD odds, the clock-window extremes form in, and breakout tendency vs the prior session.
+- Opening-range breakout stats (`compute_orb_stats`): first-break side, two-sided-break rate, outcome categories, and extension distribution — best on forex/indices.
+- ETH value-area stats (`compute_eth_profile_stats`): how often the next day touches the prior day's POC/VAH/VAL, with average touch times.
+- `/strategy` now ingests a broker CSV/XLSX trade export (auto broker-detection + column mapping) and emits per-rule compliance and signal-alignment tables; trade data stays local to the conversation.
+- `SETUP.md` recipe for scheduling a pre-session `/brief` to recover the old auto-brief cadence without a server.
+
+### Changed
+- `/brief` now folds in volatility/ATR sizing, cross-asset correlations, and (crypto) order flow — tools the brief already had but wasn't calling.
+
 ## [0.4.0] - 2026-06-20
 
 ### Added

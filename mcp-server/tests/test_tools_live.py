@@ -32,6 +32,9 @@ EXPECTED_TOOLS = {
     "run_backtest", "discover_edges",
     # fourth wave
     "calc_position_size", "get_candles", "backtest_rr",
+    # fifth wave — intraday stats
+    "compute_peak_points_stats", "get_session_card",
+    "compute_orb_stats", "compute_eth_profile_stats",
 }
 
 CASES = [
@@ -60,6 +63,10 @@ CASES = [
     ("calc_position_size", {"account_equity": 10000, "risk_pct": 1, "entry": 100, "stop": 95}, "position_size_units"),
     ("get_candles", {"symbol": "BTCUSDT", "timeframe": "1h", "limit": 50}, "candles"),
     ("backtest_rr", {"symbol": "BTCUSDT", "event_type": "london_sweep", "days": 90}, "stats"),
+    ("compute_peak_points_stats", {"symbol": "BTCUSDT", "days": 60}, "matrix"),
+    ("get_session_card", {"symbol": "BTCUSDT", "session": "london", "days": 60}, "hod_lod"),
+    ("compute_orb_stats", {"symbol": "BTCUSDT", "days": 30}, "breakouts"),
+    ("compute_eth_profile_stats", {"symbol": "BTCUSDT", "days": 30}, "touch"),
 ]
 
 

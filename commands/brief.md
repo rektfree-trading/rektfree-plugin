@@ -32,6 +32,14 @@ Steps:
    - `compute_session_stats` — **the heart of a pre-session brief**: this
      symbol's actual sweep rates, NY continuation, Power-of-3, day-of-week edge.
      Cite the real numbers (e.g. "London sweeps Asia 70% of days here").
+   - `get_volatility` — ATR / ATR% / ADR, % of ADR already used, realized vol,
+     squeeze state. Sizes the plan: ~1× ATR stops, 2–3× ATR targets, and how
+     much of the daily range is already spent (exhaustion).
+   - `get_correlations` — r vs a base (e.g. BTC). Flag |r| > ~0.5 alignments or
+     divergences that confirm or warn the bias.
+   - `get_orderflow` — **crypto only**: delta / CVD / footprint at the levels.
+     (Forex/metals/indices return a crypto-only message — skip it there and say
+     order flow isn't available.)
    - `scan_confluence` — the deterministic structural grade.
    If any single tool errors (rate limit, thin data), continue with the rest and
    note the gap — never abort the whole brief.
@@ -46,10 +54,13 @@ Steps:
    plan ("London Open KZ in 90m — watch for the Asia sweep then").
 
 5. Output the **brief** skill's pre-session format: SESSION CLOCK, BIAS &
-   CONTEXT, KEY LEVELS FOR THE SESSION, STATISTICAL EDGE, POSITIONING, SESSION
-   PLAYBOOK, WATCH-LIST / IF-THEN PLAN, and RISKS. Every plan branch needs an
-   invalidation. Respect `scan_confluence`'s `min_score` — if nothing aligns,
-   the honest answer is "no clean setup into this session; here's the watch-list."
+   CONTEXT, KEY LEVELS FOR THE SESSION, VOLATILITY & SIZING, STATISTICAL EDGE,
+   POSITIONING, CROSS-ASSET, ORDER FLOW (crypto only — for forex say
+   "n/a — no tick data"), SESSION PLAYBOOK, WATCH-LIST / IF-THEN PLAN, and
+   RISKS. Use ATR for the plan's stop/target distances and ADR-used for
+   exhaustion. Every plan branch needs an invalidation. Respect
+   `scan_confluence`'s `min_score` — if nothing aligns, the honest answer is
+   "no clean setup into this session; here's the watch-list."
 
 Keep it tight, forward-looking, and actionable — a trader should be able to set
 alerts and a plan off this before the session opens. This plugin has no

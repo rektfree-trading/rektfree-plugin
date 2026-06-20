@@ -79,6 +79,26 @@ environment. All structural/stat tools work on forex; `get_orderflow` and
 close on weekends (Fri 21:00 → Sun 21:00 UTC). Just ask Claude "how do I set up
 forex?" and the `forex` skill will walk you through it.
 
+## Recipes — scheduling a pre-session brief
+
+This plugin is **not an always-on server**, so it can't push notifications the
+way the hosted product's auto-brief did. But you can **recover that cadence
+without a server** using Claude Code's own scheduling to run `/brief` ahead of
+each session open.
+
+The three major opens, in UTC, are Asia ~00:00, London ~08:00, New York ~13:00.
+Fire the brief ~15 minutes early:
+
+- **Asia:** `23:45 UTC`  → `/brief BTCUSDT`
+- **London:** `07:45 UTC` → `/brief BTCUSDT` (or `/brief EUR_USD`)
+- **New York:** `12:45 UTC` → `/brief BTCUSDT`
+
+Wire it up with a Claude Code scheduled routine (a cron-style scheduled agent),
+or keep a session open and use `/loop` to self-pace and re-run `/brief` at the
+right times. Run one entry per symbol you trade. Each run fetches fresh candles
+and prints the brief in-session — same content as the old auto-brief, just
+pull-based instead of pushed. Times are UTC; adjust if your scheduler is local.
+
 ## Troubleshooting
 
 - **Tools still missing after a reconnect?** Check the bootstrap's notes — it
