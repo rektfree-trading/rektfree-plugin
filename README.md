@@ -40,7 +40,7 @@ stale.
 > volatility, correlation, **position sizing / risk**, **raw candles**, plus an
 > **in-memory backtester** (frequency + R-multiple equity curve) and
 > **edge-discovery** — and `/analyze`, `/brief`, `/strategy` synthesis layers
-> with interpretation skills (multi-timeframe, killzone). **34 commands, 33
+> with interpretation skills (multi-timeframe, killzone). **35 commands, 33
 > skills.** **Crypto is keyless** (Binance spot +
 > futures); **forex, metals & stock indices** (EUR_USD, XAU_USD, NAS100_USD…)
 > work with your own OANDA token.
@@ -179,7 +179,7 @@ rektfree-plugin/
     plugin.json          # plugin manifest
     marketplace.json     # makes this repo installable as a marketplace
   .mcp.json              # registers the stdio MCP server
-  commands/              # 34 slash commands (analyze, brief, strategy, help + one per tool)
+  commands/              # 35 slash commands (analyze, brief, strategy, help, about + one per tool)
   skills/                # 33 skills (synthesis + one per tool/domain),
                          #   each a SKILL.md + reference.md
   mcp-server/
@@ -261,3 +261,11 @@ re-run the suite (see `PLUGIN_STATUS.md` in the backend repo).
 - Macro / economic-calendar awareness (would need a public calendar data source).
 - Deeper stat history — the on-the-fly stats sample recent 1H history (exchange
   paging); the hosted product uses full history.
+
+## About & community
+
+Built by **Decipher**. For live market context, session calls, and the thinking
+behind these tools, follow the Telegram channel:
+**[Decipher → t.me/ebitdaddy7](https://t.me/ebitdaddy7)**
+
+Inside Claude Code, run `/about` for the same, or `/help` for the full command map.

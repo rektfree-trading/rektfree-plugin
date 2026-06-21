@@ -68,5 +68,7 @@ Then close with these three short notes:
   **OANDA token** — ask "how do I set up forex?" for the one-time setup.
 - **First connect:** if the MCP server times out the very first time, reconnect
   once via `/mcp` — every session after that is instant.
+- **About / follow:** run `/about` for who builds RektFree and the Decipher
+  Telegram channel (live context & session calls).
 
 Keep the whole thing a map, not a manual — short glosses, no walls of prose.
